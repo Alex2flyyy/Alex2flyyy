@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — leadgen{% endblock %}
+
+{% macro score_class(s) %}{% if s >= 85 %}s-hot{% elif s >= 70 %}s-warm{% elif s >= 55 %}s-ok{% else %}s-cool{% endif %}{% endmacro %}
+
+{% macro status_tag(status) %}
+  {% if status.value == 'no_website' %}<span class="tag tag-none">{{ status.display }}</span>
+  {% elif status.value in ['broken','poor','outdated'] %}<span class="tag tag-bad">{{ status.display }}</span>
+  {% elif status.value == 'good' %}<span class="tag tag-good">{{ status.display }}</span>
+  {% else %}<span class="tag">{{ status.display }}</span>{% endif %}
+{% endmacro %}
+
+{% block content %}
+<h1>Dashboard</h1>
+<div class="sub">{{ today.strftime('%A, %B %-d, %Y') }}</div>
+
+<div class="cards">
+  <div class="card"><div class="n">{{ overview.new_today }}</div><div class="l">New today</div></div>
+  <div class="card"><div class="n">{{ overview.total_leads }}</div><div class="l">Total leads</div></div>
+  <div class="card"><div class="n">{{ overview.qualified_leads }}</div><div class="l">Qualified</div></div>
+  <div class="card"><div class="n">{{ overview.pending }}</div><div class="l">Awaiting contact</div></div>
+  <div class="card"><div class="n">{{ overview.contacted }}</div><div class="l">Contacted</div></div>
+  <div class="card"><div class="n">{{ overview.won }}</div><div class="l">Won</div></div>
+  <div class="card"><div class="n">{{ overview.avg_score }}</div><div class="l">Avg score</div></div>
+  <div class="card"><div class="n">${{ '{:,.0f}'.format(overview.revenue) }}</div><div class="l">Revenue</div></div>
+</div>
+
+<div class="grid g3">
+  <div class="panel">
+    <h3>Discovery, last 30 days</h3>
+    {% set peak = (daily_trend | map(attribute='discovered') | max) if daily_trend else 1 %}
+    <div class="spark">
+      {% for d in daily_trend %}
+        <i style="height: {{ (d.discovered / peak * 100) | round }}%" title="{{ d.day }}: {{ d.discovered }}"></i>
+      {% endfor %}
+    </div>
+    {% if not daily_trend %}<div class="muted">No runs yet.</div>{% endif %}
+  </div>
+
+  <div class="panel">
+    <h3>Conversion funnel</h3>
+    {% set top = funnel[0].count if funnel and funnel[0].count else 1 %}
+    {% for f in funnel %}
+      <div class="row"><span class="k">{{ f.stage }}</span><span class="v">{{ f.count }}</span></div>
+      <div class="bar"><i style="width: {{ (f.count / top * 100) | round(1) }}%"></i></div>
+    {% endfor %}
+  </div>
+
+  <div class="panel">
+    <h3>Website status</h3>
+    {% set total_ws = (by_website_status | sum(attribute='count')) or 1 %}
+    {% for s in by_website_status %}
+      <div class="row"><span class="k">{{ s.display }}</span><span class="v">{{ s.count }}</span></div>
+      <div class="bar"><i style="width: {{ (s.count / total_ws * 100) | round(1) }}%"></i></div>
+    {% endfor %}
+  </div>
+</div>
+
+<h2>Today's top prospects</h2>
+<div class="tablewrap">
+  <table>
+    <thead>
+      <tr><th>Score</th><th>Business</th><th>Phone</th><th>Website</th><th>Status</th>
+          <th>Why</th><th>Location</th><th>Rating</th></tr>
+    </thead>
+    <tbody>
+    {% for lead in todays_leads %}
+      <tr>
+        <td><span class="score {{ score_class(lead.score) }}">{{ lead.score }}</span></td>
+        <td><a href="/leads/{{ lead.id }}"><strong>{{ lead.business.name }}</strong></a>
+            <div class="muted" style="font-size:12px">{{ lead.business.niche_key or '' }}</div></td>
+        <td class="mono">{{ lead.business.phone_e164 | phone }}</td>
+        <td>{% if lead.business.website_url %}
+              <a href="{{ lead.business.website_url }}" target="_blank" rel="noopener nofollow">{{ lead.business.website_domain }}</a>
+            {% else %}<span class="muted">—</span>{% endif %}</td>
+        <td>{{ status_tag(lead.website_status) }}</td>
+        <td class="muted" style="max-width:420px;font-size:12.5px">{{ (lead.reason or '') | truncate(150) }}</td>
+        <td>{{ lead.business.city or '' }}{% if lead.business.state %}, {{ lead.business.state }}{% endif %}</td>
+        <td>{% if lead.business.rating %}{{ lead.business.rating }}★ <span class="muted">({{ lead.business.review_count or 0 }})</span>{% else %}—{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="empty">
+        No leads yet. Run <span class="mono">leadgen run-daily</span> or trigger a run from the Runs page.
+      </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="grid g2" style="margin-top:22px">
+  <div class="panel">
+    <h3>Leads by city</h3>
+    {% for c in by_city %}
+      <div class="row">
+        <span class="k"><a href="/leads?city={{ c.city | urlencode }}">{{ c.city }}, {{ c.state }}</a></span>
+        <span class="v">{{ c.leads }} <span class="muted" style="font-weight:400">avg {{ c.avg_score }}</span></span>
+      </div>
+    {% else %}<div class="muted">No data yet.</div>{% endfor %}
+  </div>
+
+  <div class="panel">
+    <h3>Leads by niche</h3>
+    {% for n in by_niche %}
+      <div class="row">
+        <span class="k"><a href="/leads?niche={{ n.niche }}">{{ n.niche }}</a></span>
+        <span class="v">{{ n.leads }} <span class="muted" style="font-weight:400">avg {{ n.avg_score }}</span></span>
+      </div>
+    {% else %}<div class="muted">No data yet.</div>{% endfor %}
+  </div>
+</div>
+
+<div class="grid g2" style="margin-top:22px">
+  <div class="panel">
+    <h3>Recent runs</h3>
+    {% for run in recent_runs %}
+      <div class="row">
+        <span class="k">{{ run.run_date }} <span class="tag">{{ run.status.value }}</span></span>
+        <span class="v">{{ run.qualified }} qualified <span class="muted" style="font-weight:400">/ {{ run.discovered }} found</span></span>
+      </div>
+    {% else %}<div class="muted">No runs recorded.</div>{% endfor %}
+  </div>
+
+  <div class="panel">
+    <h3>Recent reports</h3>
+    {% for r in recent_reports %}
+      <div class="row">
+        <span class="k"><a href="/api/exports/report/{{ r.report_date }}?fmt=html">{{ r.report_date }}</a></span>
+        <span class="v">{{ r.lead_count }} leads
+          <a class="muted" style="font-weight:400" href="/api/exports/report/{{ r.report_date }}?fmt=csv">csv</a>
+          <a class="muted" style="font-weight:400" href="/api/exports/report/{{ r.report_date }}?fmt=xlsx">xlsx</a>
+        </span>
+      </div>
+    {% else %}<div class="muted">No reports generated.</div>{% endfor %}
+  </div>
+</div>
+{% endblock %}

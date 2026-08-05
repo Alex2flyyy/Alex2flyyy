@@ -363,9 +363,12 @@ def _reasons(
     reasons: list[str] = []
 
     if not website:
+        # Phrased to avoid an article before the niche label, which is plural
+        # ("Restaurants") and would read as "a restaurants".
+        subject = niche.label.lower() if niche else "local services"
         reasons.append(
-            f"No website at all — a {niche.label.lower() if niche else 'local business'} "
-            "with no site is invisible to everyone searching online"
+            f"No website at all — customers searching for {subject} online will "
+            "never find this business"
         )
     elif audit and audit.outcome != AuditOutcome.OK:
         reasons.append(audit.problems[0] if audit.problems else "Website is unreachable")
@@ -379,7 +382,9 @@ def _reasons(
 
     for _key, delta, why in result.adjustments:
         if delta > 0:
-            reasons.append(why.capitalize())
+            # Uppercase the first letter only — str.capitalize() would lowercase
+            # the rest and turn "no valid SSL certificate" into "...ssl...".
+            reasons.append(why[:1].upper() + why[1:])
 
     seen: set[str] = set()
     deduped = []

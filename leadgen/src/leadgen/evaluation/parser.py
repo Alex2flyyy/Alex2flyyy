@@ -42,7 +42,13 @@ TECH_SIGNATURES: list[tuple[str, re.Pattern[str]]] = [
     ("Webflow", re.compile(r"webflow\.(?:com|io)|data-wf-page", re.I)),
     ("Joomla", re.compile(r"/components/com_|Joomla!", re.I)),
     ("Drupal", re.compile(r"drupal\.js|/sites/default/files/", re.I)),
-    ("React", re.compile(r"__NEXT_DATA__|react(?:-dom)?(?:\.production)?\.min\.js|data-reactroot", re.I)),
+    # `/_next/static/` is the Next.js build output path and is by far the most
+    # reliable React signal on a production build, where the library name never
+    # appears in the bundle filename.
+    ("React", re.compile(
+        r"__NEXT_DATA__|/_next/static|react(?:-dom)?(?:\.production)?(?:\.min)?\.js|data-reactroot",
+        re.I,
+    )),
     ("Vue", re.compile(r"vue(?:\.runtime)?(?:\.min)?\.js|data-v-[0-9a-f]{8}", re.I)),
     ("Angular", re.compile(r"ng-version|angular(?:\.min)?\.js", re.I)),
     ("Bootstrap", re.compile(r"bootstrap(?:\.min)?\.(?:css|js)", re.I)),

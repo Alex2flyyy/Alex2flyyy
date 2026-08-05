@@ -1,0 +1,350 @@
+"""Database integration tests.
+
+These verify the behavior that only a real database can demonstrate: that the
+unique constraints actually stop duplicates, that ``ON CONFLICT`` correctly
+reports insert-versus-update, and that re-scoring a lead does not destroy sales
+workflow state.
+
+Skipped automatically when ``TEST_DATABASE_URL`` is not set.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timedelta
+
+import pytest
+
+from leadgen.config import get_scoring
+from leadgen.db.models import Business, WebsiteAuditRecord
+from leadgen.db.repositories import (
+    AnalyticsRepository,
+    AuditRepository,
+    BusinessRepository,
+    ContactRepository,
+    LeadRepository,
+    RunRepository,
+    SuppressionRepository,
+)
+from leadgen.domain import AuditOutcome, LeadStatus, RunStatus, WebsiteStatus
+from leadgen.pipeline.stages import business_values
+from tests.conftest import requires_db
+
+pytestmark = requires_db
+
+
+async def _make_business(session, raw, **overrides) -> Business:
+    values = business_values(raw, location_key="test", scoring_config=get_scoring())
+    values.update(overrides)
+    business, _created = await BusinessRepository(session).upsert(values)
+    return business
+
+
+class TestBusinessUpsert:
+    async def test_first_insert_reports_created(self, session, raw_business) -> None:
+        values = business_values(raw_business, location_key="t", scoring_config=get_scoring())
+        _business, created = await BusinessRepository(session).upsert(values)
+        assert created is True
+
+    async def test_second_insert_reports_updated(self, session, raw_business) -> None:
+        repo = BusinessRepository(session)
+        values = business_values(raw_business, location_key="t", scoring_config=get_scoring())
+        await repo.upsert(values)
+        _business, created = await repo.upsert(values)
+        assert created is False
+
+    async def test_volatile_fields_refresh(self, session, raw_business) -> None:
+        repo = BusinessRepository(session)
+        values = business_values(raw_business, location_key="t", scoring_config=get_scoring())
+        await repo.upsert(values)
+
+        raw_business.rating = 4.9
+        raw_business.review_count = 120
+        updated_values = business_values(
+            raw_business, location_key="t", scoring_config=get_scoring()
+        )
+        business, _ = await repo.upsert(updated_values)
+        assert business.rating == 4.9
+        assert business.review_count == 120
+
+    async def test_first_discovered_is_never_overwritten(self, session, raw_business) -> None:
+        """This column is how "new today" is computed; a re-run must not reset it."""
+        repo = BusinessRepository(session)
+        values = business_values(raw_business, location_key="t", scoring_config=get_scoring())
+        business, _ = await repo.upsert(values)
+        original = business.first_discovered_at
+
+        await repo.upsert(values)
+        refreshed = await repo.get(business.id)
+        assert refreshed.first_discovered_at == original
+
+    async def test_dedupe_key_blocks_a_second_provider(self, session, raw_business) -> None:
+        """Same shop from a different provider must violate the unique index."""
+        from sqlalchemy.exc import IntegrityError
+
+        await _make_business(session, raw_business)
+        await session.flush()
+
+        raw_business.source = "osm"
+        raw_business.source_id = "node/999"
+        values = business_values(raw_business, location_key="t", scoring_config=get_scoring())
+
+        with pytest.raises(IntegrityError):
+            await BusinessRepository(session).upsert(values)
+            await session.flush()
+
+    async def test_lookup_by_phone(self, session, raw_business) -> None:
+        await _make_business(session, raw_business)
+        await session.flush()
+        found = await BusinessRepository(session).find_probable_duplicate(
+            phone_e164="+16269407551", website_domain=None, normalized_name="bobsplumbingdrain"
+        )
+        assert found is not None
+        assert found.name.startswith("Bob's")
+
+    async def test_chain_flag_is_computed(self, session, raw_business) -> None:
+        raw_business.name = "Subway"
+        raw_business.source_id = "chain-1"
+        business = await _make_business(session, raw_business)
+        assert business.is_chain is True
+
+
+class TestAudits:
+    async def test_audit_history_accumulates(self, session, raw_business) -> None:
+        business = await _make_business(session, raw_business)
+        repo = AuditRepository(session)
+
+        for score, status in [(20.0, WebsiteStatus.POOR), (35.0, WebsiteStatus.POOR)]:
+            await repo.add(
+                WebsiteAuditRecord(
+                    business_id=business.id,
+                    url="http://x.example",
+                    outcome=AuditOutcome.OK,
+                    score=score,
+                    status=status,
+                )
+            )
+        await session.flush()
+
+        latest = await repo.latest_for_business(business.id)
+        assert latest is not None
+        assert latest.score == 35.0
+
+    async def test_status_change_recorded_on_transition(self, session, raw_business) -> None:
+        business = await _make_business(session, raw_business)
+        repo = AuditRepository(session)
+
+        first = await repo.add(
+            WebsiteAuditRecord(
+                business_id=business.id, url="http://x.example",
+                outcome=AuditOutcome.OK, score=30.0, status=WebsiteStatus.POOR,
+            )
+        )
+        change = await repo.record_status_change(
+            business_id=business.id, old=first, new_status=WebsiteStatus.BROKEN,
+            new_score=5.0, new_url="http://x.example",
+        )
+        assert change is not None
+        assert change.new_status == WebsiteStatus.BROKEN
+
+    async def test_no_change_row_when_nothing_moved(self, session, raw_business) -> None:
+        business = await _make_business(session, raw_business)
+        repo = AuditRepository(session)
+        first = await repo.add(
+            WebsiteAuditRecord(
+                business_id=business.id, url="http://x.example",
+                outcome=AuditOutcome.OK, score=30.0, status=WebsiteStatus.POOR,
+            )
+        )
+        change = await repo.record_status_change(
+            business_id=business.id, old=first, new_status=WebsiteStatus.POOR,
+            new_score=31.0, new_url="http://x.example",
+        )
+        assert change is None
+
+
+class TestLeads:
+    async def test_create_and_rescore(self, session, raw_business) -> None:
+        business = await _make_business(session, raw_business)
+        repo = LeadRepository(session)
+
+        lead, created = await repo.upsert_score(
+            business_id=business.id, score=80, website_status=WebsiteStatus.POOR,
+            website_score=25.0, qualified=True, reason="bad site",
+            components=[], adjustments=[],
+        )
+        assert created is True
+        assert lead.status == LeadStatus.QUALIFIED
+
+        lead, created = await repo.upsert_score(
+            business_id=business.id, score=72, website_status=WebsiteStatus.POOR,
+            website_score=30.0, qualified=True, reason="still bad",
+            components=[], adjustments=[],
+        )
+        assert created is False
+        assert lead.score == 72
+        assert lead.previous_score == 80
+
+    async def test_rescoring_preserves_sales_state(self, session, raw_business) -> None:
+        """The whole point of splitting leads from businesses."""
+        business = await _make_business(session, raw_business)
+        repo = LeadRepository(session)
+
+        lead, _ = await repo.upsert_score(
+            business_id=business.id, score=80, website_status=WebsiteStatus.POOR,
+            website_score=25.0, qualified=True, reason="x", components=[], adjustments=[],
+        )
+        await repo.update_status(
+            lead.id, LeadStatus.CONTACTED, notes="Called Tuesday, asked for a callback",
+            channel="phone",
+        )
+        await session.flush()
+
+        await repo.upsert_score(
+            business_id=business.id, score=79, website_status=WebsiteStatus.POOR,
+            website_score=26.0, qualified=True, reason="y", components=[], adjustments=[],
+        )
+        refreshed = await repo.get_by_business(business.id)
+        assert refreshed.status == LeadStatus.CONTACTED
+        assert refreshed.notes == "Called Tuesday, asked for a callback"
+        assert refreshed.contacted_at is not None
+
+    async def test_score_history_grows(self, session, raw_business) -> None:
+        business = await _make_business(session, raw_business)
+        repo = LeadRepository(session)
+        for score in (60, 70, 80):
+            await repo.upsert_score(
+                business_id=business.id, score=score, website_status=WebsiteStatus.POOR,
+                website_score=30.0, qualified=True, reason="x", components=[], adjustments=[],
+            )
+        await session.flush()
+
+        # Counted with an explicit query: get_full does not eager-load history,
+        # and touching a lazy relationship outside the loading context is what
+        # produces MissingGreenlet under async SQLAlchemy.
+        from sqlalchemy import func, select
+
+        from leadgen.db.models import LeadScoreHistory
+
+        lead = await repo.get_by_business(business.id)
+        count = await session.scalar(
+            select(func.count(LeadScoreHistory.id)).where(LeadScoreHistory.lead_id == lead.id)
+        )
+        assert count == 3
+
+    async def test_priority_follows_score(self, session, raw_business) -> None:
+        business = await _make_business(session, raw_business)
+        lead, _ = await LeadRepository(session).upsert_score(
+            business_id=business.id, score=92, website_status=WebsiteStatus.NONE,
+            website_score=None, qualified=True, reason="x", components=[], adjustments=[],
+        )
+        assert lead.priority == 1
+
+    async def test_search_filters(self, session, raw_business) -> None:
+        business = await _make_business(session, raw_business)
+        repo = LeadRepository(session)
+        await repo.upsert_score(
+            business_id=business.id, score=88, website_status=WebsiteStatus.POOR,
+            website_score=22.0, qualified=True, reason="x", components=[], adjustments=[],
+        )
+        await session.flush()
+
+        assert await repo.search(min_score=80, qualified_only=True)
+        assert not await repo.search(min_score=95, qualified_only=True)
+        assert await repo.search(cities=["Pasadena"])
+        assert not await repo.search(cities=["Fresno"])
+        assert await repo.search(niches=["plumbing"])
+        assert await repo.search(query="bob")
+
+    async def test_count_matches_search(self, session, raw_business) -> None:
+        business = await _make_business(session, raw_business)
+        repo = LeadRepository(session)
+        await repo.upsert_score(
+            business_id=business.id, score=88, website_status=WebsiteStatus.POOR,
+            website_score=22.0, qualified=True, reason="x", components=[], adjustments=[],
+        )
+        await session.flush()
+        rows = await repo.search(qualified_only=True, limit=1000)
+        count = await repo.count_search(qualified_only=True)
+        assert count == len(rows)
+
+    async def test_follow_ups_due(self, session, raw_business) -> None:
+        business = await _make_business(session, raw_business)
+        repo = LeadRepository(session)
+        lead, _ = await repo.upsert_score(
+            business_id=business.id, score=80, website_status=WebsiteStatus.POOR,
+            website_score=25.0, qualified=True, reason="x", components=[], adjustments=[],
+        )
+        await repo.update_status(
+            lead.id, LeadStatus.CONTACTED,
+            follow_up_at=datetime.utcnow() - timedelta(days=1), channel="email",
+        )
+        await session.flush()
+        assert len(await repo.due_follow_ups()) == 1
+
+
+class TestContactsAndSuppression:
+    async def test_contacts_deduplicate(self, session, raw_business) -> None:
+        business = await _make_business(session, raw_business)
+        repo = ContactRepository(session)
+        rows = [{"kind": "email", "value": "info@bobs.example", "source": "website"}]
+        assert await repo.upsert_many(business.id, rows) == 1
+        assert await repo.upsert_many(business.id, rows) == 0
+        assert len(await repo.for_business(business.id)) == 1
+
+    async def test_suppression_roundtrip(self, session) -> None:
+        repo = SuppressionRepository(session)
+        await repo.add("email", "stop@example.com", "opted out")
+        await session.flush()
+        active = await repo.active_values()
+        assert "stop@example.com" in active["email"]
+
+        await repo.remove("email", "stop@example.com")
+        await session.flush()
+        assert "stop@example.com" not in (await repo.active_values()).get("email", set())
+
+
+class TestRunsAndAnalytics:
+    async def test_run_lifecycle(self, session) -> None:
+        from datetime import date
+
+        repo = RunRepository(session)
+        run = await repo.create(
+            run_date=date.today(), trigger="test", location_key="test",
+            niche_keys=["plumbing"], target_leads=50, config_snapshot={},
+        )
+        assert run.status == RunStatus.RUNNING
+
+        await repo.finish(run.id, status=RunStatus.COMPLETED, discovered=10, qualified=4)
+        await session.flush()
+        latest = await repo.latest_for_date(date.today())
+        assert latest.status == RunStatus.COMPLETED
+        assert latest.discovered == 10
+        assert latest.duration_seconds is not None
+
+    async def test_overview_counts(self, session, raw_business) -> None:
+        business = await _make_business(session, raw_business)
+        await LeadRepository(session).upsert_score(
+            business_id=business.id, score=88, website_status=WebsiteStatus.POOR,
+            website_score=22.0, qualified=True, reason="x", components=[], adjustments=[],
+        )
+        await session.flush()
+
+        overview = await AnalyticsRepository(session).overview()
+        assert overview["total_businesses"] >= 1
+        assert overview["qualified_leads"] >= 1
+        assert overview["new_today"] >= 1
+
+    async def test_grouped_analytics(self, session, raw_business) -> None:
+        business = await _make_business(session, raw_business)
+        await LeadRepository(session).upsert_score(
+            business_id=business.id, score=88, website_status=WebsiteStatus.POOR,
+            website_score=22.0, qualified=True, reason="x", components=[], adjustments=[],
+        )
+        await session.flush()
+
+        repo = AnalyticsRepository(session)
+        assert any(row["city"] == "Pasadena" for row in await repo.by_city())
+        assert any(row["niche"] == "plumbing" for row in await repo.by_niche())
+        assert await repo.by_website_status()
+        assert len(await repo.conversion_funnel()) == 6
+        assert len(await repo.score_distribution()) == 5

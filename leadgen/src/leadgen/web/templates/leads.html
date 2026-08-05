@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Leads — leadgen{% endblock %}
+
+{% macro score_class(s) %}{% if s >= 85 %}s-hot{% elif s >= 70 %}s-warm{% elif s >= 55 %}s-ok{% else %}s-cool{% endif %}{% endmacro %}
+
+{% block content %}
+<h1>Leads</h1>
+<div class="sub">{{ total }} matching {{ 'lead' if total == 1 else 'leads' }}</div>
+
+<form class="filters" method="get" action="/leads">
+  <input type="search" name="q" value="{{ filters.q }}" placeholder="Search name, city, phone…" style="min-width:220px">
+
+  <select name="niche">
+    <option value="">All niches</option>
+    {% for n in niches %}
+      <option value="{{ n.key }}" {% if filters.niche == n.key %}selected{% endif %}>{{ n.label }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="city">
+    <option value="">All cities</option>
+    {% for c in cities %}
+      <option value="{{ c.city }}" {% if filters.city == c.city %}selected{% endif %}>{{ c.city }}, {{ c.state }} ({{ c.leads }})</option>
+    {% endfor %}
+  </select>
+
+  <select name="website_status">
+    <option value="">Any website status</option>
+    {% for s in website_statuses %}
+      <option value="{{ s.value }}" {% if filters.website_status == s.value %}selected{% endif %}>{{ s.display }}</option>
+    {% endfor %}
+  </select>
+
+  <select name="status">
+    <option value="">Any lead status</option>
+    {% for s in lead_statuses %}
+      <option value="{{ s.value }}" {% if filters.status == s.value %}selected{% endif %}>{{ s.value.replace('_',' ')|title }}</option>
+    {% endfor %}
+  </select>
+
+  <input type="number" name="min_score" value="{{ filters.min_score }}" placeholder="Min score" min="0" max="100" style="width:110px">
+
+  <select name="order_by">
+    <option value="score" {% if filters.order_by == 'score' %}selected{% endif %}>Highest score</option>
+    <option value="newest" {% if filters.order_by == 'newest' %}selected{% endif %}>Newest first</option>
+    <option value="updated" {% if filters.order_by == 'updated' %}selected{% endif %}>Recently scored</option>
+    <option value="name" {% if filters.order_by == 'name' %}selected{% endif %}>Name A-Z</option>
+    <option value="city" {% if filters.order_by == 'city' %}selected{% endif %}>City A-Z</option>
+  </select>
+
+  <label class="muted" style="display:flex;align-items:center;gap:6px">
+    <input type="checkbox" name="qualified_only" value="true" {% if filters.qualified_only %}checked{% endif %} style="width:auto">
+    Qualified only
+  </label>
+
+  <button type="submit">Filter</button>
+  <a class="tag" href="/leads" style="padding:8px 12px">Reset</a>
+</form>
+
+<div class="tablewrap">
+  <table>
+    <thead>
+      <tr><th>Score</th><th>Business</th><th>Phone</th><th>Email</th><th>Website</th>
+          <th>Site score</th><th>Status</th><th>Location</th><th>Rating</th><th>Pipeline</th></tr>
+    </thead>
+    <tbody>
+    {% for lead in leads %}
+      <tr>
+        <td><span class="score {{ score_class(lead.score) }}">{{ lead.score }}</span></td>
+        <td>
+          <a href="/leads/{{ lead.id }}"><strong>{{ lead.business.name }}</strong></a>
+          <div class="muted" style="font-size:12px">{{ lead.business.niche_key or '' }}</div>
+        </td>
+        <td class="mono">{{ lead.business.phone_e164 | phone }}</td>
+        <td>{% if lead.business.email %}<a href="mailto:{{ lead.business.email }}">{{ lead.business.email | truncate(26, true) }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td>{% if lead.business.website_url %}
+              <a href="{{ lead.business.website_url }}" target="_blank" rel="noopener nofollow">{{ lead.business.website_domain | truncate(26, true) }}</a>
+            {% else %}<span class="tag tag-none">none</span>{% endif %}</td>
+        <td>{% if lead.website_score is not none %}{{ lead.website_score | round(0) | int }}{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td>
+          {% if lead.website_status.value == 'no_website' %}<span class="tag tag-none">{{ lead.website_status.display }}</span>
+          {% elif lead.website_status.value in ['broken','poor','outdated'] %}<span class="tag tag-bad">{{ lead.website_status.display }}</span>
+          {% elif lead.website_status.value == 'good' %}<span class="tag tag-good">{{ lead.website_status.display }}</span>
+          {% else %}<span class="tag">{{ lead.website_status.display }}</span>{% endif %}
+        </td>
+        <td>{{ lead.business.city or '' }}{% if lead.business.state %}, {{ lead.business.state }}{% endif %}</td>
+        <td>{% if lead.business.rating %}{{ lead.business.rating }}★<div class="muted" style="font-size:11px">{{ lead.business.review_count or 0 }}</div>{% else %}—{% endif %}</td>
+        <td><span class="tag">{{ lead.status.value.replace('_',' ') }}</span></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="10" class="empty">No leads match these filters.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if total_pages > 1 %}
+{% set qs = [] %}
+{% for k, v in filters.items() %}{% if v %}{% set _ = qs.append(k ~ '=' ~ (v | string | urlencode)) %}{% endif %}{% endfor %}
+{% set base = '/leads?' ~ (qs | join('&')) %}
+<div class="pager">
+  {% if page_num > 1 %}<a class="tag" style="padding:8px 12px" href="{{ base }}&page={{ page_num - 1 }}">← Previous</a>{% endif %}
+  <span class="muted">Page {{ page_num }} of {{ total_pages }}</span>
+  {% if page_num < total_pages %}<a class="tag" style="padding:8px 12px" href="{{ base }}&page={{ page_num + 1 }}">Next →</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

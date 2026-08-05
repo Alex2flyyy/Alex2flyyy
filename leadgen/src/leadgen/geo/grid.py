@@ -133,8 +133,12 @@ def hex_tile(center: Point, area_radius_km: float, cell_radius_km: float) -> lis
                 candidate = destination(candidate, 0 if north_km > 0 else 180, abs(north_km))
             if east_km:
                 candidate = destination(candidate, 90 if east_km > 0 else 270, abs(east_km))
-            points.append((planar_distance, candidate))
+            points.append((haversine_km(center, candidate), candidate))
 
+    # Sort by true great-circle distance, not the planar approximation used to
+    # lay out the lattice. Applying two bearings in sequence accumulates a
+    # small error, so the planar figure and the real distance disagree enough
+    # to scramble the ordering near the edge of a large area.
     points.sort(key=lambda pair: pair[0])
     return [p for _, p in points]
 

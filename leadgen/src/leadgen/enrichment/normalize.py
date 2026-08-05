@@ -163,15 +163,30 @@ def normalize_url(url: str | None) -> str | None:
 
 
 def extract_domain(url: str | None) -> str | None:
-    """Registrable domain, without ``www.``  (``https://www.a.co.uk/x`` -> ``a.co.uk``)."""
+    """Registrable domain, without ``www.``  (``https://www.a.co.uk/x`` -> ``a.co.uk``).
+
+    Falls back to the last two hostname labels when the suffix is not in the
+    bundled public-suffix snapshot. Without that fallback, a business on a
+    newly delegated gTLD would silently get ``None`` for its domain, which
+    disables domain-based deduplication and the free-builder checks for that
+    record — a quiet failure rather than a loud one.
+    """
     if not url:
         return None
     if "://" not in url:
         url = "https://" + url
+
     result = _extract(url)
-    if not result.domain or not result.suffix:
+    if result.domain and result.suffix:
+        return f"{result.domain}.{result.suffix}".lower()
+
+    host = root_host(url)
+    if not host:
         return None
-    return f"{result.domain}.{result.suffix}".lower()
+    labels = [label for label in host.split(".") if label]
+    if len(labels) < 2:
+        return None
+    return ".".join(labels[-2:]).lower()
 
 
 def root_host(url: str | None) -> str | None:

@@ -37,7 +37,9 @@ def configure_logging(level: str = "INFO", fmt: str = "console") -> None:
     shared: list[Any] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
-        structlog.stdlib.add_logger_name,
+        # No `add_logger_name` here: it reads `logger.name`, which the
+        # PrintLogger factory does not provide. The module name is bound
+        # explicitly in `get_logger` instead.
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),
         structlog.processors.UnicodeDecoder(),
@@ -67,7 +69,7 @@ def get_logger(name: str) -> structlog.stdlib.BoundLogger:
 
         s = get_settings()
         configure_logging(s.log_level, s.log_format)
-    return structlog.get_logger(name)  # type: ignore[no-any-return]
+    return structlog.get_logger().bind(logger=name)  # type: ignore[no-any-return]
 
 
 def bind_context(**kwargs: Any) -> None:

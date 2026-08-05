@@ -207,13 +207,17 @@ def _security_signals(audit: WebsiteAudit) -> list[Signal]:
             )
         )
 
+    # Scored but never flagged as a "problem": missing security headers are a
+    # real weakness, but they belong in a technical audit, not in the four
+    # bullet points a business owner reads. Flagging them buries HTTPS and
+    # mobile findings that actually sell the job.
     header_count = len(audit.security_headers)
     signals.append(
         Signal(
             "security_headers", "security", header_count,
             min(100.0, header_count * 33.0), 0.5,
             f"{header_count} of 4 common security headers present",
-            header_count == 0,
+            is_problem=False,
         )
     )
     return signals
