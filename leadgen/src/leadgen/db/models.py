@@ -30,7 +30,6 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
-    Enum as SAEnum,
     Float,
     ForeignKey,
     Index,
@@ -40,6 +39,9 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+)
+from sqlalchemy import (
+    Enum as SAEnum,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -360,7 +362,9 @@ class LeadScoreHistory(Base):
     )
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     website_score: Mapped[float | None] = mapped_column(Float)
-    website_status: Mapped[WebsiteStatus | None] = mapped_column(_enum(WebsiteStatus, "website_status"))
+    website_status: Mapped[WebsiteStatus | None] = mapped_column(
+        _enum(WebsiteStatus, "website_status")
+    )
     components: Mapped[list] = mapped_column(JSONB, default=list)
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
@@ -590,7 +594,9 @@ class GeoPlace(Base):
     country_code: Mapped[str] = mapped_column(String(2), default="US", nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("normalized_name", "state", "country_code", name="uq_geo_places_name_state"),
+        UniqueConstraint(
+            "normalized_name", "state", "country_code", name="uq_geo_places_name_state"
+        ),
         Index("ix_geo_places_state_population", "state", "population"),
         Index("ix_geo_places_county_state", "county", "state"),
     )

@@ -162,8 +162,7 @@ class Settings(BaseSettings):
                 missing.append("LEADGEN_DATABASE_URL (still pointing at localhost)")
             if missing:
                 raise ValueError(
-                    "production environment is missing required settings: "
-                    + ", ".join(missing)
+                    "production environment is missing required settings: " + ", ".join(missing)
                 )
         return self
 

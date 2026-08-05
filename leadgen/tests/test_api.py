@@ -11,13 +11,13 @@ import os
 
 import pytest
 from fastapi.testclient import TestClient
+from tests.conftest import requires_db
 
 from leadgen.config import get_scoring
 from leadgen.db.repositories import BusinessRepository, LeadRepository
 from leadgen.db.session import session_scope
 from leadgen.domain import LeadStatus, WebsiteStatus
 from leadgen.pipeline.stages import business_values
-from tests.conftest import requires_db
 
 pytestmark = requires_db
 
@@ -39,9 +39,7 @@ async def seeded_lead(raw_business):
     """
     raw_business.source_id = "api-test-1"
     async with session_scope() as session:
-        values = business_values(
-            raw_business, location_key="test", scoring_config=get_scoring()
-        )
+        values = business_values(raw_business, location_key="test", scoring_config=get_scoring())
         business, _ = await BusinessRepository(session).upsert(values)
         lead, _ = await LeadRepository(session).upsert_score(
             business_id=business.id,
@@ -50,9 +48,16 @@ async def seeded_lead(raw_business):
             website_score=24.0,
             qualified=True,
             reason="Site is not mobile friendly and has no SSL",
-            components=[{"key": "web_opportunity", "label": "Web opportunity",
-                         "raw": 76.0, "weight": 0.42, "contribution": 31.9,
-                         "explanation": "Website scores 24/100"}],
+            components=[
+                {
+                    "key": "web_opportunity",
+                    "label": "Web opportunity",
+                    "raw": 76.0,
+                    "weight": 0.42,
+                    "contribution": 31.9,
+                    "explanation": "Website scores 24/100",
+                }
+            ],
             adjustments=[{"key": "ssl_missing_bonus", "delta": 6.0, "reason": "no valid SSL"}],
         )
         business_id, lead_id = business.id, lead.id
@@ -134,8 +139,14 @@ class TestStats:
     def test_full_stats_payload(self, client: TestClient, seeded_lead) -> None:
         body = client.get("/api/stats").json()
         for key in (
-            "overview", "by_city", "by_niche", "by_website_status",
-            "by_status", "score_distribution", "daily_trend", "funnel",
+            "overview",
+            "by_city",
+            "by_niche",
+            "by_website_status",
+            "by_status",
+            "score_distribution",
+            "daily_trend",
+            "funnel",
         ):
             assert key in body
         assert len(body["funnel"]) == 6
@@ -145,14 +156,15 @@ class TestStats:
 
 
 class TestWriteAuth:
-    def test_update_without_key_is_allowed_in_dev(
-        self, client: TestClient, seeded_lead
-    ) -> None:
+    def test_update_without_key_is_allowed_in_dev(self, client: TestClient, seeded_lead) -> None:
         """Development has no key configured, so writes are open by design."""
         response = client.patch(
             f"/api/leads/{seeded_lead['lead_id']}",
-            json={"status": "contacted", "notes": "Called and left a voicemail",
-                  "channel": "phone"},
+            json={
+                "status": "contacted",
+                "notes": "Called and left a voicemail",
+                "channel": "phone",
+            },
         )
         assert response.status_code == 200
         assert response.json()["status"] == "contacted"
@@ -183,9 +195,7 @@ class TestWriteAuth:
         )
         assert response.status_code == 200
 
-    def test_suppression_marks_do_not_contact(
-        self, client: TestClient, seeded_lead
-    ) -> None:
+    def test_suppression_marks_do_not_contact(self, client: TestClient, seeded_lead) -> None:
         response = client.post(f"/api/leads/{seeded_lead['lead_id']}/suppress")
         assert response.status_code == 204
 

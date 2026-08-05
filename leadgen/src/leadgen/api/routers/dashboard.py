@@ -18,7 +18,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from leadgen.api.deps import DbSession
-from leadgen.config import get_niches, get_locations
+from leadgen.config import get_locations, get_niches
 from leadgen.db.repositories import (
     AnalyticsRepository,
     LeadRepository,

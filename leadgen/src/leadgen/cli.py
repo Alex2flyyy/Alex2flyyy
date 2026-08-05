@@ -11,7 +11,7 @@ import asyncio
 import csv
 import json
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -136,7 +136,7 @@ def scheduler(
 
                         await generate_daily_report(run_id=result.run_id)
                     console.print(f"[green]Run finished: {result.status.value}[/]")
-                except Exception as exc:  # noqa: BLE001 - the loop must survive
+                except Exception as exc:
                     log.exception("scheduler.run_failed", error=str(exc))
                 # Mark the date regardless of outcome so a failing run does not
                 # retry in a tight loop for the rest of the hour.
@@ -245,17 +245,23 @@ def export_cmd(
             path = write_excel(rows, Path(out) if out else out_dir / f"leads_{stamp}.xlsx")
             console.print(f"[green]Wrote {len(rows)} rows[/] → {path}")
         elif destination == "crm":
-            path = export_to_crm(rows, crm, Path(out) if out else out_dir / f"leads_{crm}_{stamp}.csv")
+            path = export_to_crm(
+                rows, crm, Path(out) if out else out_dir / f"leads_{crm}_{stamp}.csv"
+            )
             console.print(f"[green]Wrote {len(rows)} rows in {crm} format[/] → {path}")
         elif destination == "google_sheets":
             url = export_to_google_sheets(rows)
             console.print(f"[green]Pushed {len(rows)} rows[/] → {url}")
         elif destination == "notion":
             result = asyncio.run(export_to_notion(rows))
-            console.print(f"[green]Notion: {result['created']} created, {result['failed']} failed[/]")
+            console.print(
+                f"[green]Notion: {result['created']} created, {result['failed']} failed[/]"
+            )
         elif destination == "airtable":
             result = asyncio.run(export_to_airtable(rows))
-            console.print(f"[green]Airtable: {result['created']} created, {result['failed']} failed[/]")
+            console.print(
+                f"[green]Airtable: {result['created']} created, {result['failed']} failed[/]"
+            )
         else:
             console.print(f"[red]Unknown destination {destination!r}[/]")
             raise typer.Exit(1)
@@ -426,7 +432,7 @@ def geo_plan(
             str(index),
             cell.label[:44],
             f"{cell.lat:.4f}, {cell.lng:.4f}",
-            f"{cell.radius_m/1000:.1f}km",
+            f"{cell.radius_m / 1000:.1f}km",
             f"{cell.population:,}" if cell.population else "—",
         )
     console.print(table)
@@ -660,7 +666,11 @@ def config_locations() -> None:
         table.add_column(column)
     for key, target in sorted(get_locations().targets.items()):
         table.add_row(
-            key, target.label, target.kind, f"{target.cell_radius_m/1000:.1f}km", str(target.max_cells)
+            key,
+            target.label,
+            target.kind,
+            f"{target.cell_radius_m / 1000:.1f}km",
+            str(target.max_cells),
         )
     console.print(table)
 
@@ -676,9 +686,11 @@ def config_check() -> None:
         niches = get_niches()
         locations = get_locations()
         get_scoring()
-        console.print(f"[green]✓[/] Config files valid ({len(niches.niches)} niches, "
-                      f"{len(locations.targets)} locations)")
-    except Exception as exc:  # noqa: BLE001
+        console.print(
+            f"[green]✓[/] Config files valid ({len(niches.niches)} niches, "
+            f"{len(locations.targets)} locations)"
+        )
+    except Exception as exc:
         problems.append(f"config files: {exc}")
 
     if not settings.google_maps_api_key:
@@ -708,7 +720,7 @@ def config_check() -> None:
                 await conn.execute(text("SELECT 1"))
             await dispose_engine()
             return "ok"
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return str(exc)[:200]
 
     db_status = asyncio.run(check_db())

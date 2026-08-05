@@ -215,6 +215,4 @@ async def suppress_lead(lead_id: int, session: DbSession, reason: str | None = N
     summary="Add an entry to the do-not-contact list",
 )
 async def add_suppression(payload: SuppressionIn, session: DbSession) -> None:
-    await SuppressionRepository(session).add(
-        payload.kind, payload.value.lower(), payload.reason
-    )
+    await SuppressionRepository(session).add(payload.kind, payload.value.lower(), payload.reason)

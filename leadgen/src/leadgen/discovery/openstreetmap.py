@@ -81,7 +81,9 @@ class OpenStreetMapProvider(Provider):
         for tag in niche.osm_tags:
             key, _, value = tag.partition("=")
             if value:
-                clauses.append(f'nwr["{key}"="{value}"](around:{cell.radius_m},{cell.lat},{cell.lng});')
+                clauses.append(
+                    f'nwr["{key}"="{value}"](around:{cell.radius_m},{cell.lat},{cell.lng});'
+                )
             else:
                 clauses.append(f'nwr["{key}"](around:{cell.radius_m},{cell.lat},{cell.lng});')
         body = "\n  ".join(clauses)
@@ -116,9 +118,7 @@ class OpenStreetMapProvider(Provider):
         self._mark_quota_exhausted()
         return None
 
-    def _parse(
-        self, element: dict[str, Any], cell: SearchCell, niche: Niche
-    ) -> RawBusiness | None:
+    def _parse(self, element: dict[str, Any], cell: SearchCell, niche: Niche) -> RawBusiness | None:
         tags = element.get("tags") or {}
         name = tags.get("name")
         if not name:
@@ -130,9 +130,7 @@ class OpenStreetMapProvider(Provider):
         lng = element.get("lon") or center.get("lon")
 
         street = " ".join(
-            part
-            for part in (tags.get("addr:housenumber"), tags.get("addr:street"))
-            if part
+            part for part in (tags.get("addr:housenumber"), tags.get("addr:street")) if part
         ).strip()
 
         social = {}

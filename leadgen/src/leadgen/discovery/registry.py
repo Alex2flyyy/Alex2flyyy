@@ -40,9 +40,7 @@ def build_providers(fetcher: HttpFetcher, names: list[str] | None = None) -> lis
     for name in names:
         cls = PROVIDER_CLASSES.get(name)
         if cls is None:
-            log.warning(
-                "provider.unknown", name=name, known=sorted(PROVIDER_CLASSES)
-            )
+            log.warning("provider.unknown", name=name, known=sorted(PROVIDER_CLASSES))
             continue
         providers.append(cls(fetcher))
     return providers
@@ -79,10 +77,13 @@ class DiscoveryOrchestrator:
                 log.error("provider.quota", provider=provider.name, error=str(exc))
                 self._disabled.add(provider.name)
                 continue
-            except Exception as exc:  # noqa: BLE001 - one provider must not kill the run
+            except Exception as exc:
                 log.exception(
-                    "provider.search_failed", provider=provider.name, cell=cell.key(),
-                    niche=niche.key, error=str(exc),
+                    "provider.search_failed",
+                    provider=provider.name,
+                    cell=cell.key(),
+                    niche=niche.key,
+                    error=str(exc),
                 )
                 provider.errors += 1
                 continue
@@ -109,10 +110,8 @@ class DiscoveryOrchestrator:
             if provider.name == business.source:
                 try:
                     return await provider.details(business)
-                except Exception as exc:  # noqa: BLE001
-                    log.warning(
-                        "provider.details_failed", provider=provider.name, error=str(exc)
-                    )
+                except Exception as exc:
+                    log.warning("provider.details_failed", provider=provider.name, error=str(exc))
         return business
 
     def stats(self) -> dict[str, Any]:

@@ -23,7 +23,7 @@ from collections import defaultdict
 class TokenBucket:
     """Async token bucket. ``rate`` tokens per second, capped at ``capacity``."""
 
-    __slots__ = ("rate", "capacity", "_tokens", "_updated", "_lock")
+    __slots__ = ("_lock", "_tokens", "_updated", "capacity", "rate")
 
     def __init__(self, rate: float, capacity: float | None = None) -> None:
         if rate <= 0:

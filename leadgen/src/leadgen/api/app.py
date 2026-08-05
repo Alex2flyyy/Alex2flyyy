@@ -5,7 +5,6 @@ from __future__ import annotations
 import contextlib
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,7 +45,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
         log.info("api.database_ready")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         log.error(
             "api.database_unavailable",
             error=str(exc)[:300],
@@ -95,9 +94,7 @@ def create_app() -> FastAPI:
         # site actually looks like next to its score.
         screenshot_dir = Path(settings.screenshot_dir)
         screenshot_dir.mkdir(parents=True, exist_ok=True)
-        app.mount(
-            "/screenshots", StaticFiles(directory=str(screenshot_dir)), name="screenshots"
-        )
+        app.mount("/screenshots", StaticFiles(directory=str(screenshot_dir)), name="screenshots")
         app.include_router(dashboard.router)
 
     @app.get("/health", response_model=HealthOut, tags=["system"])
@@ -107,7 +104,7 @@ def create_app() -> FastAPI:
             engine = get_engine()
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             database = f"error: {str(exc)[:120]}"
 
         return HealthOut(

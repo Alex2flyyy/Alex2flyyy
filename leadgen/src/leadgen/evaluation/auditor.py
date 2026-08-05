@@ -28,11 +28,11 @@ from urllib.parse import urlparse
 from leadgen.compliance.robots import RobotsChecker
 from leadgen.config import get_settings
 from leadgen.domain import AuditOutcome, WebsiteAudit
+from leadgen.enrichment.normalize import normalize_url, root_host
 from leadgen.evaluation.browser import BrowserAuditor, NullBrowserAuditor, RenderResult
 from leadgen.evaluation.links import check_links, check_resource
 from leadgen.evaluation.pagespeed import PageSpeedClient, PageSpeedResult
 from leadgen.evaluation.parser import ParsedPage, parse_html
-from leadgen.enrichment.normalize import normalize_url, root_host
 from leadgen.http import HttpFetcher, probe_ssl
 from leadgen.logging import get_logger
 from leadgen.scoring.website_score import score_website
@@ -110,8 +110,10 @@ class WebsiteAuditor:
         audit.security_headers = {
             key: response.headers.get(key, "")
             for key in (
-                "strict-transport-security", "content-security-policy",
-                "x-frame-options", "x-content-type-options",
+                "strict-transport-security",
+                "content-security-policy",
+                "x-frame-options",
+                "x-content-type-options",
             )
             if response.headers.get(key)
         }
@@ -129,7 +131,7 @@ class WebsiteAuditor:
 
         # --- tier 3: rendered audit -----------------------------------
         needs_render = self.options.use_browser and (
-            parsed.is_minimal              # empty HTML = JS-rendered, must render
+            parsed.is_minimal  # empty HTML = JS-rendered, must render
             or self.options.take_screenshots
             or not parsed.has_viewport_meta
             or bool({"React", "Vue", "Angular", "Wix", "Squarespace"} & set(parsed.tech_stack))
@@ -159,7 +161,11 @@ class WebsiteAuditor:
             )
         tasks.append(("sitemap", check_resource(self.fetcher, normalized, "/sitemap.xml")))
         tasks.append(("robots", check_resource(self.fetcher, normalized, "/robots.txt")))
-        if self.options.check_contact_page and parsed.contact_page_url and not parsed.has_contact_form:
+        if (
+            self.options.check_contact_page
+            and parsed.contact_page_url
+            and not parsed.has_contact_form
+        ):
             tasks.append(("contact", self._probe_contact_page(parsed.contact_page_url)))
 
         results = await asyncio.gather(*(task for _, task in tasks), return_exceptions=True)
@@ -224,9 +230,7 @@ class WebsiteAuditor:
         audit.phones = parsed.phones
         audit.social_links = parsed.social_links
 
-    def _apply_render(
-        self, audit: WebsiteAudit, render: RenderResult, parsed: ParsedPage
-    ) -> None:
+    def _apply_render(self, audit: WebsiteAudit, render: RenderResult, parsed: ParsedPage) -> None:
         audit.horizontal_overflow = render.horizontal_overflow
         audit.smallest_font_px = render.smallest_font_px
         audit.tap_target_issues = render.tap_target_issues

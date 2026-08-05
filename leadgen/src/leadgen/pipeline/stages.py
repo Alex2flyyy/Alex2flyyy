@@ -26,7 +26,7 @@ from leadgen.dedupe.matcher import build_identity
 from leadgen.domain import AIEnrichment, RawBusiness, ScoreResult, WebsiteAudit
 from leadgen.enrichment.normalize import format_phone_display, normalize_state, normalize_zip
 from leadgen.logging import get_logger
-from leadgen.scoring.lead_score import _is_chain  # noqa: PLC2701 - intentional internal reuse
+from leadgen.scoring.lead_score import _is_chain
 
 log = get_logger(__name__)
 
@@ -90,7 +90,7 @@ async def persist_businesses(
         values = business_values(raw, location_key=location_key, scoring_config=scoring_config)
         try:
             business, was_created = await repo.upsert(values)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             # The dedupe_key unique constraint fires when the same business
             # arrives under two different provider ids. That is the constraint
             # doing its job, not an error worth aborting the batch for.

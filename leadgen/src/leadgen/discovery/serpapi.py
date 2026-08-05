@@ -39,9 +39,7 @@ class SerpApiProvider(Provider):
     async def available(self) -> bool:
         return bool(self.api_key) and not self._quota_exhausted
 
-    async def search(
-        self, cell: SearchCell, niche: Niche, *, limit: int = 20
-    ) -> list[RawBusiness]:
+    async def search(self, cell: SearchCell, niche: Niche, *, limit: int = 20) -> list[RawBusiness]:
         if not await self.available() or not niche.keywords:
             return []
 

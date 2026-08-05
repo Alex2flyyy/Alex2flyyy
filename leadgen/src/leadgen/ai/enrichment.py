@@ -149,7 +149,9 @@ class EnrichmentService:
             outreach_angle=str(data.get("outreach_angle", ""))[:500],
             outreach_subject=str(data.get("outreach_subject", ""))[:200],
             talking_points=[str(t)[:200] for t in (data.get("talking_points") or [])][:4],
-            inferred_niche=(str(data["inferred_niche"])[:60] if data.get("inferred_niche") else None),
+            inferred_niche=(
+                str(data["inferred_niche"])[:60] if data.get("inferred_niche") else None
+            ),
             estimated_value_tier=data.get("estimated_value_tier"),
             confidence=float(data.get("confidence") or 0.0),
             model=response.model,
@@ -180,7 +182,7 @@ class EnrichmentService:
                     stop.set()
                     log.error("ai.budget_exhausted", completed=self.enriched)
                     return None
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     self.failed += 1
                     log.warning("ai.enrich_error", error=str(exc)[:200])
                     return None

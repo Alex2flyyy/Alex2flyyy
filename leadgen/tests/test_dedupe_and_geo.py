@@ -59,11 +59,10 @@ class TestInMemoryDeduper:
 
     def test_formatting_variant_is_dropped(self) -> None:
         deduper = InMemoryDeduper()
-        deduper.seen(make("Joe's Plumbing, Inc.", source_id="a",
-                          street_address="123 North Main Street"))
-        assert deduper.seen(
-            make("JOES PLUMBING", source_id="b", street_address="123 N Main St")
+        deduper.seen(
+            make("Joe's Plumbing, Inc.", source_id="a", street_address="123 North Main Street")
         )
+        assert deduper.seen(make("JOES PLUMBING", source_id="b", street_address="123 N Main St"))
 
     def test_shared_phone_and_similar_name_is_duplicate(self) -> None:
         deduper = InMemoryDeduper()
@@ -103,8 +102,9 @@ class TestInMemoryDeduper:
         assert len(kept) == 3
 
     def test_identity_fields(self) -> None:
-        identity = build_identity(make("Joe's Plumbing", phone="(626) 940-7551",
-                                       website="https://www.joesplumbing.com/x"))
+        identity = build_identity(
+            make("Joe's Plumbing", phone="(626) 940-7551", website="https://www.joesplumbing.com/x")
+        )
         assert identity["source_key"] == "google_places:joe's-plumbing"
         assert identity["phone_e164"] == "+16269407551"
         assert identity["website_domain"] == "joesplumbing.com"

@@ -56,8 +56,7 @@ def score_website(audit: WebsiteAudit) -> WebsiteAudit:
     # Renormalize over observed dimensions only.
     observed_weight = sum(config.weights[d] for d in dimension_scores) or 1.0
     audit.score = round(
-        sum(dimension_scores[d] * config.weights[d] for d in dimension_scores)
-        / observed_weight,
+        sum(dimension_scores[d] * config.weights[d] for d in dimension_scores) / observed_weight,
         1,
     )
 
@@ -70,16 +69,19 @@ def _score_unreachable(audit: WebsiteAudit) -> WebsiteAudit:
     """A site we could not load. The outcome *is* the finding."""
     messages = {
         AuditOutcome.DNS_FAILURE: (
-            "Domain does not resolve — the website is effectively gone", 0.0
+            "Domain does not resolve — the website is effectively gone",
+            0.0,
         ),
         AuditOutcome.CONNECTION_REFUSED: ("Server refuses connections — site is down", 0.0),
-        AuditOutcome.TIMEOUT: ("Site did not respond within the timeout — visitors will leave", 8.0),
+        AuditOutcome.TIMEOUT: (
+            "Site did not respond within the timeout — visitors will leave",
+            8.0,
+        ),
         AuditOutcome.TLS_ERROR: (
-            "SSL certificate is invalid or expired — browsers show a security warning", 10.0
+            "SSL certificate is invalid or expired — browsers show a security warning",
+            10.0,
         ),
-        AuditOutcome.HTTP_ERROR: (
-            f"Site returns an error ({audit.error or 'HTTP error'})", 12.0
-        ),
+        AuditOutcome.HTTP_ERROR: (f"Site returns an error ({audit.error or 'HTTP error'})", 12.0),
         AuditOutcome.PARKED: ("Domain is parked — there is no real website", 5.0),
         AuditOutcome.BLOCKED: ("Site blocked automated access; could not evaluate", 50.0),
         AuditOutcome.SKIPPED_ROBOTS: ("Not evaluated (robots.txt disallows crawling)", 50.0),
@@ -128,11 +130,15 @@ def _availability_signals(audit: WebsiteAudit) -> list[Signal]:
 
     ms = audit.response_time_ms or 0
     if ms > 5000:
-        points, note, problem = 10.0, f"Server takes {ms/1000:.1f}s to respond — very slow", True
+        points, note, problem = 10.0, f"Server takes {ms / 1000:.1f}s to respond — very slow", True
     elif ms > 2500:
-        points, note, problem = 40.0, f"Server responds in {ms/1000:.1f}s — slower than typical", True
+        points, note, problem = (
+            40.0,
+            f"Server responds in {ms / 1000:.1f}s — slower than typical",
+            True,
+        )
     elif ms > 1200:
-        points, note, problem = 70.0, f"Server responds in {ms/1000:.1f}s", False
+        points, note, problem = 70.0, f"Server responds in {ms / 1000:.1f}s", False
     else:
         points, note, problem = 100.0, f"Server responds quickly ({ms}ms)", False
     signals.append(Signal("ttfb", "availability", ms, points, 1.5, note, problem))
@@ -141,7 +147,9 @@ def _availability_signals(audit: WebsiteAudit) -> list[Signal]:
         ratio = audit.broken_link_count / audit.checked_link_count
         if ratio > 0.25:
             points = 5.0
-            note = f"{audit.broken_link_count} of {audit.checked_link_count} links checked are broken"
+            note = (
+                f"{audit.broken_link_count} of {audit.checked_link_count} links checked are broken"
+            )
             problem = True
         elif ratio > 0.05:
             points = 45.0
@@ -150,13 +158,19 @@ def _availability_signals(audit: WebsiteAudit) -> list[Signal]:
         else:
             points, note, problem = 100.0, "No broken links found in sample", False
         signals.append(
-            Signal("broken_links", "availability", audit.broken_link_count, points, 1.5, note, problem)
+            Signal(
+                "broken_links", "availability", audit.broken_link_count, points, 1.5, note, problem
+            )
         )
 
     if len(audit.redirect_chain) > 2:
         signals.append(
             Signal(
-                "redirect_chain", "availability", len(audit.redirect_chain), 40.0, 0.5,
+                "redirect_chain",
+                "availability",
+                len(audit.redirect_chain),
+                40.0,
+                0.5,
                 f"{len(audit.redirect_chain)} redirects before the page loads — slows every visit",
                 True,
             )
@@ -170,7 +184,11 @@ def _security_signals(audit: WebsiteAudit) -> list[Signal]:
     if not audit.uses_https:
         signals.append(
             Signal(
-                "https", "security", False, 0.0, 3.0,
+                "https",
+                "security",
+                False,
+                0.0,
+                3.0,
                 "No HTTPS — Chrome marks the site 'Not secure' to every visitor",
                 True,
             )
@@ -181,7 +199,11 @@ def _security_signals(audit: WebsiteAudit) -> list[Signal]:
         if not audit.ssl_valid:
             signals.append(
                 Signal(
-                    "ssl_valid", "security", False, 0.0, 2.0,
+                    "ssl_valid",
+                    "security",
+                    False,
+                    0.0,
+                    2.0,
                     "SSL certificate does not validate — visitors see a security warning",
                     True,
                 )
@@ -201,7 +223,11 @@ def _security_signals(audit: WebsiteAudit) -> list[Signal]:
     if audit.mixed_content:
         signals.append(
             Signal(
-                "mixed_content", "security", True, 20.0, 1.0,
+                "mixed_content",
+                "security",
+                True,
+                20.0,
+                1.0,
                 "Page loads insecure resources over HTTP, weakening the padlock",
                 True,
             )
@@ -214,8 +240,11 @@ def _security_signals(audit: WebsiteAudit) -> list[Signal]:
     header_count = len(audit.security_headers)
     signals.append(
         Signal(
-            "security_headers", "security", header_count,
-            min(100.0, header_count * 33.0), 0.5,
+            "security_headers",
+            "security",
+            header_count,
+            min(100.0, header_count * 33.0),
+            0.5,
             f"{header_count} of 4 common security headers present",
             is_problem=False,
         )
@@ -229,18 +258,28 @@ def _mobile_signals(audit: WebsiteAudit) -> list[Signal]:
     if not audit.has_viewport_meta:
         signals.append(
             Signal(
-                "viewport", "mobile", False, 0.0, 3.0,
+                "viewport",
+                "mobile",
+                False,
+                0.0,
+                3.0,
                 "No mobile viewport tag — the site was never built for phones",
                 True,
             )
         )
     else:
-        signals.append(Signal("viewport", "mobile", True, 100.0, 1.5, "Mobile viewport is declared"))
+        signals.append(
+            Signal("viewport", "mobile", True, 100.0, 1.5, "Mobile viewport is declared")
+        )
 
     if audit.horizontal_overflow:
         signals.append(
             Signal(
-                "overflow", "mobile", True, 5.0, 3.0,
+                "overflow",
+                "mobile",
+                True,
+                5.0,
+                3.0,
                 "Content runs off the screen on a phone, forcing sideways scrolling",
                 True,
             )
@@ -253,9 +292,17 @@ def _mobile_signals(audit: WebsiteAudit) -> list[Signal]:
     if audit.smallest_font_px is not None:
         size = audit.smallest_font_px
         if size < 9:
-            points, note, problem = 10.0, f"Text as small as {size:.0f}px — unreadable on a phone", True
+            points, note, problem = (
+                10.0,
+                f"Text as small as {size:.0f}px — unreadable on a phone",
+                True,
+            )
         elif size < 12:
-            points, note, problem = 45.0, f"Some text is only {size:.0f}px — hard to read on mobile", True
+            points, note, problem = (
+                45.0,
+                f"Some text is only {size:.0f}px — hard to read on mobile",
+                True,
+            )
         else:
             points, note, problem = 100.0, "Text is legible on mobile", False
         signals.append(Signal("font_size", "mobile", size, points, 1.0, note, problem))
@@ -265,7 +312,11 @@ def _mobile_signals(audit: WebsiteAudit) -> list[Signal]:
         points = 20.0 if count > 15 else 55.0 if count > 5 else 85.0
         signals.append(
             Signal(
-                "tap_targets", "mobile", count, points, 1.0,
+                "tap_targets",
+                "mobile",
+                count,
+                points,
+                1.0,
                 f"{count} buttons or links are too small to tap reliably",
                 count > 5,
             )
@@ -280,7 +331,11 @@ def _performance_signals(audit: WebsiteAudit) -> list[Signal]:
         score = audit.psi_performance
         signals.append(
             Signal(
-                "psi_performance", "performance", score, score, 3.0,
+                "psi_performance",
+                "performance",
+                score,
+                score,
+                3.0,
                 f"Google PageSpeed scores this site {score:.0f}/100 on mobile",
                 score < 50,
             )
@@ -290,18 +345,34 @@ def _performance_signals(audit: WebsiteAudit) -> list[Signal]:
         # Google's own Core Web Vitals thresholds: good <2.5s, poor >4s.
         lcp = audit.lcp_ms / 1000
         if lcp > 4:
-            points, note, problem = 10.0, f"Main content takes {lcp:.1f}s to appear (Google rates >4s as poor)", True
+            points, note, problem = (
+                10.0,
+                f"Main content takes {lcp:.1f}s to appear (Google rates >4s as poor)",
+                True,
+            )
         elif lcp > 2.5:
-            points, note, problem = 55.0, f"Main content takes {lcp:.1f}s to appear — above Google's 2.5s target", True
+            points, note, problem = (
+                55.0,
+                f"Main content takes {lcp:.1f}s to appear — above Google's 2.5s target",
+                True,
+            )
         else:
             points, note, problem = 100.0, f"Main content appears in {lcp:.1f}s", False
         signals.append(Signal("lcp", "performance", audit.lcp_ms, points, 2.0, note, problem))
 
     if audit.cls is not None:
         if audit.cls > 0.25:
-            points, note, problem = 15.0, f"Layout shifts badly while loading (CLS {audit.cls})", True
+            points, note, problem = (
+                15.0,
+                f"Layout shifts badly while loading (CLS {audit.cls})",
+                True,
+            )
         elif audit.cls > 0.1:
-            points, note, problem = 60.0, f"Some layout shift while loading (CLS {audit.cls})", False
+            points, note, problem = (
+                60.0,
+                f"Some layout shift while loading (CLS {audit.cls})",
+                False,
+            )
         else:
             points, note, problem = 100.0, "Layout is stable while loading", False
         signals.append(Signal("cls", "performance", audit.cls, points, 1.0, note, problem))
@@ -309,9 +380,17 @@ def _performance_signals(audit: WebsiteAudit) -> list[Signal]:
     if audit.page_weight_kb:
         weight = audit.page_weight_kb
         if weight > 5000:
-            points, note, problem = 10.0, f"Page weighs {weight/1024:.1f}MB — punishing on mobile data", True
+            points, note, problem = (
+                10.0,
+                f"Page weighs {weight / 1024:.1f}MB — punishing on mobile data",
+                True,
+            )
         elif weight > 2500:
-            points, note, problem = 45.0, f"Page weighs {weight/1024:.1f}MB — heavier than it should be", True
+            points, note, problem = (
+                45.0,
+                f"Page weighs {weight / 1024:.1f}MB — heavier than it should be",
+                True,
+            )
         elif weight > 1200:
             points, note, problem = 75.0, f"Page weighs {weight:.0f}KB", False
         else:
@@ -326,74 +405,148 @@ def _seo_signals(audit: WebsiteAudit) -> list[Signal]:
 
     if not audit.title:
         signals.append(
-            Signal("title", "seo", None, 0.0, 2.0,
-                   "No page title — Google has nothing to show in search results", True)
+            Signal(
+                "title",
+                "seo",
+                None,
+                0.0,
+                2.0,
+                "No page title — Google has nothing to show in search results",
+                True,
+            )
         )
     elif audit.title_length < 15:
         signals.append(
-            Signal("title", "seo", audit.title_length, 40.0, 2.0,
-                   f"Page title is only {audit.title_length} characters — too thin to rank", True)
+            Signal(
+                "title",
+                "seo",
+                audit.title_length,
+                40.0,
+                2.0,
+                f"Page title is only {audit.title_length} characters — too thin to rank",
+                True,
+            )
         )
     elif audit.title_length > 65:
         signals.append(
-            Signal("title", "seo", audit.title_length, 70.0, 2.0,
-                   f"Page title is {audit.title_length} characters and will be truncated in search", False)
+            Signal(
+                "title",
+                "seo",
+                audit.title_length,
+                70.0,
+                2.0,
+                f"Page title is {audit.title_length} characters and will be truncated in search",
+                False,
+            )
         )
     else:
-        signals.append(Signal("title", "seo", audit.title_length, 100.0, 2.0, "Page title is well-formed"))
+        signals.append(
+            Signal("title", "seo", audit.title_length, 100.0, 2.0, "Page title is well-formed")
+        )
 
     if not audit.meta_description:
         signals.append(
-            Signal("meta_description", "seo", None, 10.0, 2.0,
-                   "No meta description — Google invents the search snippet instead of you", True)
+            Signal(
+                "meta_description",
+                "seo",
+                None,
+                10.0,
+                2.0,
+                "No meta description — Google invents the search snippet instead of you",
+                True,
+            )
         )
     elif not 70 <= audit.meta_description_length <= 165:
         signals.append(
-            Signal("meta_description", "seo", audit.meta_description_length, 60.0, 2.0,
-                   f"Meta description is {audit.meta_description_length} characters "
-                   "(70-160 displays best)", False)
+            Signal(
+                "meta_description",
+                "seo",
+                audit.meta_description_length,
+                60.0,
+                2.0,
+                f"Meta description is {audit.meta_description_length} characters "
+                "(70-160 displays best)",
+                False,
+            )
         )
     else:
         signals.append(
-            Signal("meta_description", "seo", audit.meta_description_length, 100.0, 2.0,
-                   "Meta description is well-sized")
+            Signal(
+                "meta_description",
+                "seo",
+                audit.meta_description_length,
+                100.0,
+                2.0,
+                "Meta description is well-sized",
+            )
         )
 
     if audit.h1_count == 0:
         signals.append(Signal("h1", "seo", 0, 20.0, 1.5, "No H1 heading on the page", True))
     elif audit.h1_count > 3:
         signals.append(
-            Signal("h1", "seo", audit.h1_count, 55.0, 1.5,
-                   f"{audit.h1_count} H1 headings dilute the page's topic", True)
+            Signal(
+                "h1",
+                "seo",
+                audit.h1_count,
+                55.0,
+                1.5,
+                f"{audit.h1_count} H1 headings dilute the page's topic",
+                True,
+            )
         )
     else:
         signals.append(Signal("h1", "seo", audit.h1_count, 100.0, 1.5, "Clear H1 heading present"))
 
     signals.append(
-        Signal("structured_data", "seo", audit.has_structured_data,
-               100.0 if audit.has_structured_data else 25.0, 1.5,
-               "Structured data present for rich search results"
-               if audit.has_structured_data
-               else "No structured data — missing rich results and local SEO signals",
-               not audit.has_structured_data)
+        Signal(
+            "structured_data",
+            "seo",
+            audit.has_structured_data,
+            100.0 if audit.has_structured_data else 25.0,
+            1.5,
+            "Structured data present for rich search results"
+            if audit.has_structured_data
+            else "No structured data — missing rich results and local SEO signals",
+            not audit.has_structured_data,
+        )
     )
 
     signals.append(
-        Signal("sitemap", "seo", audit.has_sitemap,
-               100.0 if audit.has_sitemap else 50.0, 0.8,
-               "XML sitemap found" if audit.has_sitemap else "No XML sitemap found",
-               not audit.has_sitemap)
+        Signal(
+            "sitemap",
+            "seo",
+            audit.has_sitemap,
+            100.0 if audit.has_sitemap else 50.0,
+            0.8,
+            "XML sitemap found" if audit.has_sitemap else "No XML sitemap found",
+            not audit.has_sitemap,
+        )
     )
 
     if audit.word_count < 150:
         signals.append(
-            Signal("content", "seo", audit.word_count, 15.0, 1.5,
-                   f"Only {audit.word_count} words of content — too thin for Google to rank", True)
+            Signal(
+                "content",
+                "seo",
+                audit.word_count,
+                15.0,
+                1.5,
+                f"Only {audit.word_count} words of content — too thin for Google to rank",
+                True,
+            )
         )
     elif audit.word_count < 400:
         signals.append(
-            Signal("content", "seo", audit.word_count, 60.0, 1.5,
-                   f"{audit.word_count} words of content — light for a service business", False)
+            Signal(
+                "content",
+                "seo",
+                audit.word_count,
+                60.0,
+                1.5,
+                f"{audit.word_count} words of content — light for a service business",
+                False,
+            )
         )
     else:
         signals.append(
@@ -402,8 +555,15 @@ def _seo_signals(audit: WebsiteAudit) -> list[Signal]:
 
     if audit.psi_seo is not None:
         signals.append(
-            Signal("psi_seo", "seo", audit.psi_seo, audit.psi_seo, 2.0,
-                   f"Google's SEO audit scores {audit.psi_seo:.0f}/100", audit.psi_seo < 70)
+            Signal(
+                "psi_seo",
+                "seo",
+                audit.psi_seo,
+                audit.psi_seo,
+                2.0,
+                f"Google's SEO audit scores {audit.psi_seo:.0f}/100",
+                audit.psi_seo < 70,
+            )
         )
     return signals
 
@@ -413,14 +573,28 @@ def _design_signals(audit: WebsiteAudit) -> list[Signal]:
 
     if audit.is_flash_or_legacy:
         signals.append(
-            Signal("legacy_html", "design", True, 0.0, 3.0,
-                   "Built with obsolete HTML (Flash, frames, or <font> tags) — "
-                   "roughly two decades out of date", True)
+            Signal(
+                "legacy_html",
+                "design",
+                True,
+                0.0,
+                3.0,
+                "Built with obsolete HTML (Flash, frames, or <font> tags) — "
+                "roughly two decades out of date",
+                True,
+            )
         )
     elif audit.uses_table_layout:
         signals.append(
-            Signal("table_layout", "design", True, 10.0, 3.0,
-                   "Laid out with HTML tables — a pre-2005 technique", True)
+            Signal(
+                "table_layout",
+                "design",
+                True,
+                10.0,
+                3.0,
+                "Laid out with HTML tables — a pre-2005 technique",
+                True,
+            )
         )
 
     if audit.design_era:
@@ -438,48 +612,94 @@ def _design_signals(audit: WebsiteAudit) -> list[Signal]:
             50.0,
         )
         signals.append(
-            Signal("design_era", "design", audit.design_era, points, 2.5,
-                   f"Design looks {audit.design_era}", points < 50)
+            Signal(
+                "design_era",
+                "design",
+                audit.design_era,
+                points,
+                2.5,
+                f"Design looks {audit.design_era}",
+                points < 50,
+            )
         )
 
     if audit.copyright_year:
         stale = datetime.utcnow().year - audit.copyright_year
         if stale >= 3:
             signals.append(
-                Signal("copyright", "design", audit.copyright_year, 20.0, 1.0,
-                       f"Copyright notice still says {audit.copyright_year} — "
-                       "the site looks abandoned", True)
+                Signal(
+                    "copyright",
+                    "design",
+                    audit.copyright_year,
+                    20.0,
+                    1.0,
+                    f"Copyright notice still says {audit.copyright_year} — "
+                    "the site looks abandoned",
+                    True,
+                )
             )
         elif stale >= 1:
             signals.append(
-                Signal("copyright", "design", audit.copyright_year, 70.0, 1.0,
-                       f"Copyright year is {audit.copyright_year}", False)
+                Signal(
+                    "copyright",
+                    "design",
+                    audit.copyright_year,
+                    70.0,
+                    1.0,
+                    f"Copyright year is {audit.copyright_year}",
+                    False,
+                )
             )
 
     signals.append(
-        Signal("favicon", "design", audit.has_favicon,
-               100.0 if audit.has_favicon else 40.0, 0.5,
-               "Favicon present" if audit.has_favicon
-               else "No favicon — the browser tab shows a blank icon",
-               not audit.has_favicon)
+        Signal(
+            "favicon",
+            "design",
+            audit.has_favicon,
+            100.0 if audit.has_favicon else 40.0,
+            0.5,
+            "Favicon present"
+            if audit.has_favicon
+            else "No favicon — the browser tab shows a blank icon",
+            not audit.has_favicon,
+        )
     )
 
     if audit.total_images == 0 and audit.word_count > 50:
         signals.append(
-            Signal("images", "design", 0, 25.0, 1.0,
-                   "No images at all — the page reads as a wall of text", True)
+            Signal(
+                "images",
+                "design",
+                0,
+                25.0,
+                1.0,
+                "No images at all — the page reads as a wall of text",
+                True,
+            )
         )
 
     if audit.has_open_graph:
         signals.append(
-            Signal("open_graph", "design", True, 100.0, 0.5,
-                   "Link previews configured for social sharing")
+            Signal(
+                "open_graph",
+                "design",
+                True,
+                100.0,
+                0.5,
+                "Link previews configured for social sharing",
+            )
         )
     else:
         signals.append(
-            Signal("open_graph", "design", False, 45.0, 0.5,
-                   "No social preview tags — shared links look broken on Facebook and iMessage",
-                   True)
+            Signal(
+                "open_graph",
+                "design",
+                False,
+                45.0,
+                0.5,
+                "No social preview tags — shared links look broken on Facebook and iMessage",
+                True,
+            )
         )
     return signals
 
@@ -488,34 +708,57 @@ def _conversion_signals(audit: WebsiteAudit) -> list[Signal]:
     signals: list[Signal] = []
 
     signals.append(
-        Signal("contact_form", "conversion", audit.has_contact_form,
-               100.0 if audit.has_contact_form else 15.0, 2.5,
-               "Contact form available" if audit.has_contact_form
-               else "No contact form — visitors have no easy way to reach out",
-               not audit.has_contact_form)
+        Signal(
+            "contact_form",
+            "conversion",
+            audit.has_contact_form,
+            100.0 if audit.has_contact_form else 15.0,
+            2.5,
+            "Contact form available"
+            if audit.has_contact_form
+            else "No contact form — visitors have no easy way to reach out",
+            not audit.has_contact_form,
+        )
     )
 
     signals.append(
-        Signal("click_to_call", "conversion", audit.has_click_to_call,
-               100.0 if audit.has_click_to_call else 30.0, 2.0,
-               "Phone number is tap-to-call on mobile" if audit.has_click_to_call
-               else "Phone number is not tap-to-call — mobile visitors must copy it by hand",
-               not audit.has_click_to_call)
+        Signal(
+            "click_to_call",
+            "conversion",
+            audit.has_click_to_call,
+            100.0 if audit.has_click_to_call else 30.0,
+            2.0,
+            "Phone number is tap-to-call on mobile"
+            if audit.has_click_to_call
+            else "Phone number is not tap-to-call — mobile visitors must copy it by hand",
+            not audit.has_click_to_call,
+        )
     )
 
     signals.append(
-        Signal("cta", "conversion", audit.has_cta,
-               100.0 if audit.has_cta else 20.0, 2.0,
-               "Clear call to action present" if audit.has_cta
-               else "No clear call to action — nothing tells the visitor what to do next",
-               not audit.has_cta)
+        Signal(
+            "cta",
+            "conversion",
+            audit.has_cta,
+            100.0 if audit.has_cta else 20.0,
+            2.0,
+            "Clear call to action present"
+            if audit.has_cta
+            else "No clear call to action — nothing tells the visitor what to do next",
+            not audit.has_cta,
+        )
     )
 
     signals.append(
-        Signal("social", "conversion", audit.has_social_links,
-               100.0 if audit.has_social_links else 60.0, 0.5,
-               "Links to social profiles" if audit.has_social_links
-               else "No social media links", False)
+        Signal(
+            "social",
+            "conversion",
+            audit.has_social_links,
+            100.0 if audit.has_social_links else 60.0,
+            0.5,
+            "Links to social profiles" if audit.has_social_links else "No social media links",
+            False,
+        )
     )
     return signals
 
@@ -533,25 +776,42 @@ def _accessibility_signals(audit: WebsiteAudit) -> list[Signal]:
             )
             problem = True
         elif missing_ratio > 0.2:
-            points, note, problem = 55.0, f"{audit.images_missing_alt} images are missing alt text", True
+            points, note, problem = (
+                55.0,
+                f"{audit.images_missing_alt} images are missing alt text",
+                True,
+            )
         else:
             points, note, problem = 100.0, "Images have alt text", False
-        signals.append(Signal("alt_text", "accessibility", missing_ratio, points, 2.0, note, problem))
+        signals.append(
+            Signal("alt_text", "accessibility", missing_ratio, points, 2.0, note, problem)
+        )
 
     signals.append(
-        Signal("lang", "accessibility", audit.lang_attribute,
-               100.0 if audit.lang_attribute else 50.0, 1.0,
-               "Page language is declared" if audit.lang_attribute
-               else "No language attribute — screen readers cannot pick the right voice",
-               not audit.lang_attribute)
+        Signal(
+            "lang",
+            "accessibility",
+            audit.lang_attribute,
+            100.0 if audit.lang_attribute else 50.0,
+            1.0,
+            "Page language is declared"
+            if audit.lang_attribute
+            else "No language attribute — screen readers cannot pick the right voice",
+            not audit.lang_attribute,
+        )
     )
 
     if audit.psi_accessibility is not None:
         signals.append(
-            Signal("psi_accessibility", "accessibility", audit.psi_accessibility,
-                   audit.psi_accessibility, 2.0,
-                   f"Google's accessibility audit scores {audit.psi_accessibility:.0f}/100",
-                   audit.psi_accessibility < 70)
+            Signal(
+                "psi_accessibility",
+                "accessibility",
+                audit.psi_accessibility,
+                audit.psi_accessibility,
+                2.0,
+                f"Google's accessibility audit scores {audit.psi_accessibility:.0f}/100",
+                audit.psi_accessibility < 70,
+            )
         )
     return signals
 

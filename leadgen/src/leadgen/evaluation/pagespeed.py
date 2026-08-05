@@ -189,12 +189,27 @@ def _parse(data: dict[str, Any], strategy: str) -> PageSpeedResult:
     # Collect the human-readable titles of failed audits. These become bullet
     # points in the prospect report, so they need to read as findings, not IDs.
     interesting = {
-        "viewport", "font-size", "tap-targets", "is-on-https", "uses-https",
-        "meta-description", "document-title", "image-alt", "link-text",
-        "crawlable-anchors", "hreflang", "render-blocking-resources",
-        "uses-responsive-images", "unminified-css", "unminified-javascript",
-        "uses-text-compression", "server-response-time", "redirects",
-        "errors-in-console", "color-contrast", "html-has-lang",
+        "viewport",
+        "font-size",
+        "tap-targets",
+        "is-on-https",
+        "uses-https",
+        "meta-description",
+        "document-title",
+        "image-alt",
+        "link-text",
+        "crawlable-anchors",
+        "hreflang",
+        "render-blocking-resources",
+        "uses-responsive-images",
+        "unminified-css",
+        "unminified-javascript",
+        "uses-text-compression",
+        "server-response-time",
+        "redirects",
+        "errors-in-console",
+        "color-contrast",
+        "html-has-lang",
     }
     for audit_id in interesting:
         audit = audits.get(audit_id)

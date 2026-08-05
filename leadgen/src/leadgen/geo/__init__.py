@@ -17,8 +17,8 @@ from leadgen.geo.resolver import LocationResolver, estimate_cost
 
 __all__ = [
     "BoundingBox",
-    "Geocoder",
     "GeocodeResult",
+    "Geocoder",
     "LocationResolver",
     "Point",
     "bbox_around",

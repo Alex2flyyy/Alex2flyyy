@@ -78,9 +78,7 @@ async def check_links(
                 return url, head.error_kind in {"dns_failure", "connection_refused"}
             return url, bool(head.status_code and head.status_code >= 400)
 
-    outcomes = await asyncio.gather(
-        *(check(url) for url in sample), return_exceptions=True
-    )
+    outcomes = await asyncio.gather(*(check(url) for url in sample), return_exceptions=True)
 
     for outcome in outcomes:
         if isinstance(outcome, BaseException):

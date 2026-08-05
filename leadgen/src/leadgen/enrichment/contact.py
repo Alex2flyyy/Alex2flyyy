@@ -36,8 +36,17 @@ log = get_logger(__name__)
 
 # Ordered by how often they actually carry an address.
 CONTACT_PATH_PRIORITY = [
-    "/contact", "/contact-us", "/contactus", "/about", "/about-us",
-    "/team", "/staff", "/our-team", "/get-a-quote", "/quote", "/estimate",
+    "/contact",
+    "/contact-us",
+    "/contactus",
+    "/about",
+    "/about-us",
+    "/team",
+    "/staff",
+    "/our-team",
+    "/get-a-quote",
+    "/quote",
+    "/estimate",
 ]
 
 _CONTACT_LINK_RE = re.compile(r"contact|about|team|staff|quote|estimate", re.I)
@@ -99,13 +108,23 @@ class ContactFindings:
             )
         for platform, url in self.social_links.items():
             rows.append(
-                {"kind": "social", "value": url, "label": platform,
-                 "source": "website", "confidence": 0.9}
+                {
+                    "kind": "social",
+                    "value": url,
+                    "label": platform,
+                    "source": "website",
+                    "confidence": 0.9,
+                }
             )
         if self.contact_form_url:
             rows.append(
-                {"kind": "form", "value": self.contact_form_url, "source": "website",
-                 "confidence": 0.9, "label": "contact form"}
+                {
+                    "kind": "form",
+                    "value": self.contact_form_url,
+                    "source": "website",
+                    "confidence": 0.9,
+                    "label": "contact form",
+                }
             )
         return rows
 
@@ -164,7 +183,9 @@ class ContactEnricher:
 
             if len(pages_to_visit) < max_pages and not seed_html:
                 pages_to_visit.extend(
-                    p for p in self._candidate_pages(response.text, url) if _canonical(p) not in visited
+                    p
+                    for p in self._candidate_pages(response.text, url)
+                    if _canonical(p) not in visited
                 )
 
         self.sites_crawled += 1
@@ -200,9 +221,7 @@ class ContactEnricher:
         """
         for match in _OWNER_TITLE_RE.finditer(text[:8000]):
             window = text[max(0, match.start() - 80) : match.end() + 80]
-            name_match = re.search(
-                r"\b([A-Z][a-z]{1,15})\s+([A-Z][a-z]{1,20})\b", window
-            )
+            name_match = re.search(r"\b([A-Z][a-z]{1,15})\s+([A-Z][a-z]{1,20})\b", window)
             if name_match:
                 candidate = f"{name_match.group(1)} {name_match.group(2)}"
                 # Filter out headings that merely look like names.

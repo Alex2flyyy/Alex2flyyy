@@ -59,7 +59,9 @@ class RobotsChecker:
         parser: urllib.robotparser.RobotFileParser | None = None
         try:
             response = await self._client.get(
-                robots_url, timeout=8.0, follow_redirects=True,
+                robots_url,
+                timeout=8.0,
+                follow_redirects=True,
                 headers={"User-Agent": self._user_agent},
             )
             if response.status_code in (401, 403):

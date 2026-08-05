@@ -31,16 +31,36 @@ SCORE_FILLS = [
 ]
 
 COLUMN_WIDTHS = {
-    "rank": 6, "lead_score": 10, "business_name": 34, "owner_name": 18,
-    "phone": 16, "email": 30, "website": 34, "website_status": 17,
-    "website_score": 12, "why_they_need_a_website": 60, "street_address": 28,
-    "city": 16, "state": 7, "zip_code": 9, "county": 16, "niche": 16,
-    "category": 24, "google_rating": 9, "review_count": 9,
-    "google_maps_url": 26, "hours": 34, "social_links": 30,
-    "business_summary": 60, "top_problems": 60,
-    "redesign_recommendations": 60, "outreach_angle": 60,
-    "outreach_subject": 34, "talking_points": 60,
-    "estimated_value_tier": 12, "lead_status": 14,
+    "rank": 6,
+    "lead_score": 10,
+    "business_name": 34,
+    "owner_name": 18,
+    "phone": 16,
+    "email": 30,
+    "website": 34,
+    "website_status": 17,
+    "website_score": 12,
+    "why_they_need_a_website": 60,
+    "street_address": 28,
+    "city": 16,
+    "state": 7,
+    "zip_code": 9,
+    "county": 16,
+    "niche": 16,
+    "category": 24,
+    "google_rating": 9,
+    "review_count": 9,
+    "google_maps_url": 26,
+    "hours": 34,
+    "social_links": 30,
+    "business_summary": 60,
+    "top_problems": 60,
+    "redesign_recommendations": 60,
+    "outreach_angle": 60,
+    "outreach_subject": 34,
+    "talking_points": 60,
+    "estimated_value_tier": 12,
+    "lead_status": 14,
 }
 
 
@@ -104,8 +124,14 @@ def _write_leads(sheet: Worksheet, rows: list[dict[str, Any]], columns: list[str
                         cell.fill = fill
                         break
                 cell.font = Font(bold=True)
-            elif column in {"why_they_need_a_website", "business_summary", "top_problems",
-                            "outreach_angle", "talking_points", "redesign_recommendations"}:
+            elif column in {
+                "why_they_need_a_website",
+                "business_summary",
+                "top_problems",
+                "outreach_angle",
+                "talking_points",
+                "redesign_recommendations",
+            }:
                 cell.alignment = Alignment(wrap_text=True, vertical="top")
 
     if rows:

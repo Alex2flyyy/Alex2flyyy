@@ -174,9 +174,7 @@ def build_enrichment_prompt(
     lines.append("")
     lines.append("## Web presence")
     if not website:
-        lines.append(
-            "NO WEBSITE FOUND. This business has no website listed anywhere we searched."
-        )
+        lines.append("NO WEBSITE FOUND. This business has no website listed anywhere we searched.")
     else:
         lines.append(f"Website: {website}")
         lines.append(f"Assessed status: {website_status}")
@@ -208,8 +206,7 @@ def build_enrichment_prompt(
     lines.append("")
     lines.append("## Context")
     lines.append(
-        f"A typical strong website in the {niche_label.lower()} category has: "
-        f"{niche_expectation}."
+        f"A typical strong website in the {niche_label.lower()} category has: {niche_expectation}."
     )
     lines.append("")
     lines.append(

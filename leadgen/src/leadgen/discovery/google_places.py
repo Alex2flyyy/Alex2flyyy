@@ -115,9 +115,7 @@ class GooglePlacesProvider(Provider):
             "X-Goog-FieldMask": field_mask,
         }
 
-    async def search(
-        self, cell: SearchCell, niche: Niche, *, limit: int = 20
-    ) -> list[RawBusiness]:
+    async def search(self, cell: SearchCell, niche: Niche, *, limit: int = 20) -> list[RawBusiness]:
         if not await self.available():
             return []
 
@@ -139,9 +137,7 @@ class GooglePlacesProvider(Provider):
             for keyword in niche.keywords[:2]:
                 if len(results) >= limit:
                     break
-                text_results = await self._search_text(
-                    cell, keyword, limit=limit - len(results)
-                )
+                text_results = await self._search_text(cell, keyword, limit=limit - len(results))
                 for business in text_results:
                     if business.source_id not in seen_ids:
                         seen_ids.add(business.source_id)
@@ -179,7 +175,7 @@ class GooglePlacesProvider(Provider):
         collected: list[RawBusiness] = []
         page_token: str | None = None
 
-        for page in range(3):  # API allows at most 3 pages (60 results)
+        for _page in range(3):  # API allows at most 3 pages (60 results)
             payload: dict[str, Any] = {
                 "textQuery": keyword,
                 "maxResultCount": min(limit - len(collected), 20),

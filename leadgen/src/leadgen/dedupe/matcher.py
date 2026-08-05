@@ -91,7 +91,7 @@ class InMemoryDeduper:
     def __init__(self) -> None:
         self._source_keys: set[str] = set()
         self._dedupe_keys: set[str] = set()
-        self._phones: dict[str, str] = {}   # phone -> normalized name
+        self._phones: dict[str, str] = {}  # phone -> normalized name
         self._domains: dict[str, str] = {}  # domain -> normalized name
         self.duplicates_dropped = 0
 
@@ -99,26 +99,31 @@ class InMemoryDeduper:
         ident = build_identity(raw)
         source_key = ident["source_key"] or ""
         dedupe_key = ident["dedupe_key"] or ""
-        norm_name = ident["normalized_name"] or ""
 
         if source_key in self._source_keys or dedupe_key in self._dedupe_keys:
             self.duplicates_dropped += 1
             return True
 
+        # Shared phone + similar name = same business. Shared phone alone is not
+        # enough: answering services and multi-location owners reuse a single
+        # number across genuinely distinct listings.
         phone = ident["phone_e164"]
-        if phone and phone in self._phones:
-            # Shared phone + similar name = same business. Shared phone alone is
-            # not enough: answering services and multi-location owners reuse a
-            # single number across genuinely distinct listings.
-            if name_similarity(self._phones[phone], raw.name) >= 0.5:
-                self.duplicates_dropped += 1
-                return True
+        if (
+            phone
+            and phone in self._phones
+            and name_similarity(self._phones[phone], raw.name) >= 0.5
+        ):
+            self.duplicates_dropped += 1
+            return True
 
         domain = ident["website_domain"]
-        if domain and domain in self._domains:
-            if name_similarity(self._domains[domain], raw.name) >= 0.6:
-                self.duplicates_dropped += 1
-                return True
+        if (
+            domain
+            and domain in self._domains
+            and name_similarity(self._domains[domain], raw.name) >= 0.6
+        ):
+            self.duplicates_dropped += 1
+            return True
 
         self._source_keys.add(source_key)
         self._dedupe_keys.add(dedupe_key)

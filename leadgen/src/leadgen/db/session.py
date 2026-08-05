@@ -5,13 +5,13 @@ from __future__ import annotations
 import contextlib
 from collections.abc import AsyncIterator
 
-from sqlalchemy.pool import NullPool
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from leadgen.config import get_settings
 from leadgen.logging import get_logger
@@ -41,7 +41,7 @@ def get_engine() -> AsyncEngine:
                 pool_size=s.db_pool_size,
                 max_overflow=s.db_max_overflow,
                 pool_pre_ping=True,  # nightly runs idle long enough for the DB
-                pool_recycle=1800,   # to drop connections; ping + recycle avoids it
+                pool_recycle=1800,  # to drop connections; ping + recycle avoids it
             )
 
         _engine = create_async_engine(s.database_url, **kwargs)

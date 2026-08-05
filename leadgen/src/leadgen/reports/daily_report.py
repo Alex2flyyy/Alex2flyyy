@@ -252,7 +252,13 @@ async def generate_daily_report(
         )
 
     log.info("report.generated", date=stamp, leads=len(rows), formats=list(paths))
-    return {"date": stamp, "lead_count": len(rows), "paths": paths, "summary": summary, "stats": stats}
+    return {
+        "date": stamp,
+        "lead_count": len(rows),
+        "paths": paths,
+        "summary": summary,
+        "stats": stats,
+    }
 
 
 def _summary_line(rows: list[dict[str, Any]], stats: dict[str, Any]) -> str:

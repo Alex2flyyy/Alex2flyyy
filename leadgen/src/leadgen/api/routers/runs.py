@@ -83,7 +83,7 @@ async def _execute(config: PipelineConfig) -> None:
             from leadgen.reports.daily_report import generate_daily_report
 
             await generate_daily_report(run_id=result.run_id)
-    except Exception as exc:  # noqa: BLE001 - background task, nothing to bubble to
+    except Exception as exc:
         log.exception("run.background_failed", error=str(exc))
     finally:
         _running = False

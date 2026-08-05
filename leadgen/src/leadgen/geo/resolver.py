@@ -165,19 +165,21 @@ class LocationResolver:
 
     async def _resolve_county(self, target: LocationTarget) -> list[SearchCell]:
         places = await self._places(
-            "county", county=target.county, state=target.state,
+            "county",
+            county=target.county,
+            state=target.state,
             min_population=target.min_population,
             limit=target.max_cells * 2,
         )
         if not places:
-            return await self._fallback_area(
-                target, f"{target.county} County, {target.state}"
-            )
+            return await self._fallback_area(target, f"{target.county} County, {target.state}")
         return self._cells_from_places(places, target, f"{target.county} County")
 
     async def _resolve_state(self, target: LocationTarget) -> list[SearchCell]:
         places = await self._places(
-            "state", state=target.state, min_population=target.min_population,
+            "state",
+            state=target.state,
+            min_population=target.min_population,
             limit=target.max_cells * 2,
         )
         if not places:
@@ -186,7 +188,8 @@ class LocationResolver:
 
     async def _resolve_nation(self, target: LocationTarget) -> list[SearchCell]:
         places = await self._places(
-            "nation", country_code=target.country_code,
+            "nation",
+            country_code=target.country_code,
             min_population=target.min_population,
             limit=target.max_cells * 2,
         )
@@ -207,9 +210,9 @@ class LocationResolver:
         # Adjacent municipalities overlap heavily. Require centers to be at
         # least one cell radius apart before spending a search on each.
         points = [Point(float(p.lat), float(p.lng)) for p in places]
-        kept_points = set(
+        kept_points = {
             (p.lat, p.lng) for p in deduplicate_points(points, min_separation_km=cell_km)
-        )
+        }
 
         cells: list[SearchCell] = []
         for place in places:
@@ -242,9 +245,7 @@ class LocationResolver:
         result = await self.geocoder.geocode(query)
         if not result.found or result.point is None:
             return []
-        points = hex_tile(
-            result.point, result.approx_radius_km, meters_to_km(target.cell_radius_m)
-        )
+        points = hex_tile(result.point, result.approx_radius_km, meters_to_km(target.cell_radius_m))
         return [
             SearchCell(
                 lat=p.lat,

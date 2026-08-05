@@ -13,6 +13,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 import pytest
+from tests.conftest import requires_db
 
 from leadgen.config import get_scoring
 from leadgen.db.models import Business, WebsiteAuditRecord
@@ -27,7 +28,6 @@ from leadgen.db.repositories import (
 )
 from leadgen.domain import AuditOutcome, LeadStatus, RunStatus, WebsiteStatus
 from leadgen.pipeline.stages import business_values
-from tests.conftest import requires_db
 
 pytestmark = requires_db
 
@@ -135,13 +135,19 @@ class TestAudits:
 
         first = await repo.add(
             WebsiteAuditRecord(
-                business_id=business.id, url="http://x.example",
-                outcome=AuditOutcome.OK, score=30.0, status=WebsiteStatus.POOR,
+                business_id=business.id,
+                url="http://x.example",
+                outcome=AuditOutcome.OK,
+                score=30.0,
+                status=WebsiteStatus.POOR,
             )
         )
         change = await repo.record_status_change(
-            business_id=business.id, old=first, new_status=WebsiteStatus.BROKEN,
-            new_score=5.0, new_url="http://x.example",
+            business_id=business.id,
+            old=first,
+            new_status=WebsiteStatus.BROKEN,
+            new_score=5.0,
+            new_url="http://x.example",
         )
         assert change is not None
         assert change.new_status == WebsiteStatus.BROKEN
@@ -151,13 +157,19 @@ class TestAudits:
         repo = AuditRepository(session)
         first = await repo.add(
             WebsiteAuditRecord(
-                business_id=business.id, url="http://x.example",
-                outcome=AuditOutcome.OK, score=30.0, status=WebsiteStatus.POOR,
+                business_id=business.id,
+                url="http://x.example",
+                outcome=AuditOutcome.OK,
+                score=30.0,
+                status=WebsiteStatus.POOR,
             )
         )
         change = await repo.record_status_change(
-            business_id=business.id, old=first, new_status=WebsiteStatus.POOR,
-            new_score=31.0, new_url="http://x.example",
+            business_id=business.id,
+            old=first,
+            new_status=WebsiteStatus.POOR,
+            new_score=31.0,
+            new_url="http://x.example",
         )
         assert change is None
 
@@ -168,17 +180,27 @@ class TestLeads:
         repo = LeadRepository(session)
 
         lead, created = await repo.upsert_score(
-            business_id=business.id, score=80, website_status=WebsiteStatus.POOR,
-            website_score=25.0, qualified=True, reason="bad site",
-            components=[], adjustments=[],
+            business_id=business.id,
+            score=80,
+            website_status=WebsiteStatus.POOR,
+            website_score=25.0,
+            qualified=True,
+            reason="bad site",
+            components=[],
+            adjustments=[],
         )
         assert created is True
         assert lead.status == LeadStatus.QUALIFIED
 
         lead, created = await repo.upsert_score(
-            business_id=business.id, score=72, website_status=WebsiteStatus.POOR,
-            website_score=30.0, qualified=True, reason="still bad",
-            components=[], adjustments=[],
+            business_id=business.id,
+            score=72,
+            website_status=WebsiteStatus.POOR,
+            website_score=30.0,
+            qualified=True,
+            reason="still bad",
+            components=[],
+            adjustments=[],
         )
         assert created is False
         assert lead.score == 72
@@ -190,18 +212,32 @@ class TestLeads:
         repo = LeadRepository(session)
 
         lead, _ = await repo.upsert_score(
-            business_id=business.id, score=80, website_status=WebsiteStatus.POOR,
-            website_score=25.0, qualified=True, reason="x", components=[], adjustments=[],
+            business_id=business.id,
+            score=80,
+            website_status=WebsiteStatus.POOR,
+            website_score=25.0,
+            qualified=True,
+            reason="x",
+            components=[],
+            adjustments=[],
         )
         await repo.update_status(
-            lead.id, LeadStatus.CONTACTED, notes="Called Tuesday, asked for a callback",
+            lead.id,
+            LeadStatus.CONTACTED,
+            notes="Called Tuesday, asked for a callback",
             channel="phone",
         )
         await session.flush()
 
         await repo.upsert_score(
-            business_id=business.id, score=79, website_status=WebsiteStatus.POOR,
-            website_score=26.0, qualified=True, reason="y", components=[], adjustments=[],
+            business_id=business.id,
+            score=79,
+            website_status=WebsiteStatus.POOR,
+            website_score=26.0,
+            qualified=True,
+            reason="y",
+            components=[],
+            adjustments=[],
         )
         refreshed = await repo.get_by_business(business.id)
         assert refreshed.status == LeadStatus.CONTACTED
@@ -213,8 +249,14 @@ class TestLeads:
         repo = LeadRepository(session)
         for score in (60, 70, 80):
             await repo.upsert_score(
-                business_id=business.id, score=score, website_status=WebsiteStatus.POOR,
-                website_score=30.0, qualified=True, reason="x", components=[], adjustments=[],
+                business_id=business.id,
+                score=score,
+                website_status=WebsiteStatus.POOR,
+                website_score=30.0,
+                qualified=True,
+                reason="x",
+                components=[],
+                adjustments=[],
             )
         await session.flush()
 
@@ -234,8 +276,14 @@ class TestLeads:
     async def test_priority_follows_score(self, session, raw_business) -> None:
         business = await _make_business(session, raw_business)
         lead, _ = await LeadRepository(session).upsert_score(
-            business_id=business.id, score=92, website_status=WebsiteStatus.NONE,
-            website_score=None, qualified=True, reason="x", components=[], adjustments=[],
+            business_id=business.id,
+            score=92,
+            website_status=WebsiteStatus.NONE,
+            website_score=None,
+            qualified=True,
+            reason="x",
+            components=[],
+            adjustments=[],
         )
         assert lead.priority == 1
 
@@ -243,8 +291,14 @@ class TestLeads:
         business = await _make_business(session, raw_business)
         repo = LeadRepository(session)
         await repo.upsert_score(
-            business_id=business.id, score=88, website_status=WebsiteStatus.POOR,
-            website_score=22.0, qualified=True, reason="x", components=[], adjustments=[],
+            business_id=business.id,
+            score=88,
+            website_status=WebsiteStatus.POOR,
+            website_score=22.0,
+            qualified=True,
+            reason="x",
+            components=[],
+            adjustments=[],
         )
         await session.flush()
 
@@ -267,8 +321,14 @@ class TestLeads:
         business = await _make_business(session, raw_business)
         repo = LeadRepository(session)
         await repo.upsert_score(
-            business_id=business.id, score=88, website_status=WebsiteStatus.POOR,
-            website_score=22.0, qualified=True, reason="x", components=[], adjustments=[],
+            business_id=business.id,
+            score=88,
+            website_status=WebsiteStatus.POOR,
+            website_score=22.0,
+            qualified=True,
+            reason="x",
+            components=[],
+            adjustments=[],
         )
         await session.flush()
         rows = await repo.search(qualified_only=True, limit=1000)
@@ -279,12 +339,20 @@ class TestLeads:
         business = await _make_business(session, raw_business)
         repo = LeadRepository(session)
         lead, _ = await repo.upsert_score(
-            business_id=business.id, score=80, website_status=WebsiteStatus.POOR,
-            website_score=25.0, qualified=True, reason="x", components=[], adjustments=[],
+            business_id=business.id,
+            score=80,
+            website_status=WebsiteStatus.POOR,
+            website_score=25.0,
+            qualified=True,
+            reason="x",
+            components=[],
+            adjustments=[],
         )
         await repo.update_status(
-            lead.id, LeadStatus.CONTACTED,
-            follow_up_at=datetime.utcnow() - timedelta(days=1), channel="email",
+            lead.id,
+            LeadStatus.CONTACTED,
+            follow_up_at=datetime.utcnow() - timedelta(days=1),
+            channel="email",
         )
         await session.flush()
         assert len(await repo.due_follow_ups()) == 1
@@ -317,8 +385,12 @@ class TestRunsAndAnalytics:
 
         repo = RunRepository(session)
         run = await repo.create(
-            run_date=date.today(), trigger="test", location_key="test",
-            niche_keys=["plumbing"], target_leads=50, config_snapshot={},
+            run_date=date.today(),
+            trigger="test",
+            location_key="test",
+            niche_keys=["plumbing"],
+            target_leads=50,
+            config_snapshot={},
         )
         assert run.status == RunStatus.RUNNING
 
@@ -332,8 +404,14 @@ class TestRunsAndAnalytics:
     async def test_overview_counts(self, session, raw_business) -> None:
         business = await _make_business(session, raw_business)
         await LeadRepository(session).upsert_score(
-            business_id=business.id, score=88, website_status=WebsiteStatus.POOR,
-            website_score=22.0, qualified=True, reason="x", components=[], adjustments=[],
+            business_id=business.id,
+            score=88,
+            website_status=WebsiteStatus.POOR,
+            website_score=22.0,
+            qualified=True,
+            reason="x",
+            components=[],
+            adjustments=[],
         )
         await session.flush()
 
@@ -345,8 +423,14 @@ class TestRunsAndAnalytics:
     async def test_grouped_analytics(self, session, raw_business) -> None:
         business = await _make_business(session, raw_business)
         await LeadRepository(session).upsert_score(
-            business_id=business.id, score=88, website_status=WebsiteStatus.POOR,
-            website_score=22.0, qualified=True, reason="x", components=[], adjustments=[],
+            business_id=business.id,
+            score=88,
+            website_status=WebsiteStatus.POOR,
+            website_score=22.0,
+            qualified=True,
+            reason="x",
+            components=[],
+            adjustments=[],
         )
         await session.flush()
 

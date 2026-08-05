@@ -111,33 +111,53 @@ def _web_opportunity(
 ) -> ScoreComponent:
     if not website:
         return ScoreComponent(
-            "web_opportunity", "Web opportunity", 100.0, 0.0, 0.0,
+            "web_opportunity",
+            "Web opportunity",
+            100.0,
+            0.0,
+            0.0,
             "No website at all — the largest possible opportunity",
         )
 
     if domain and domain in set(config.social_as_website_domains):
         return ScoreComponent(
-            "web_opportunity", "Web opportunity", 92.0, 0.0, 0.0,
+            "web_opportunity",
+            "Web opportunity",
+            92.0,
+            0.0,
+            0.0,
             "Uses a social media page instead of a real website",
         )
 
     if audit is None:
         return ScoreComponent(
-            "web_opportunity", "Web opportunity", 55.0, 0.0, 0.0,
+            "web_opportunity",
+            "Web opportunity",
+            55.0,
+            0.0,
+            0.0,
             "Website exists but has not been evaluated yet",
         )
 
     if audit.outcome != AuditOutcome.OK:
         raw = 95.0 if audit.outcome != AuditOutcome.SKIPPED_ROBOTS else 50.0
         return ScoreComponent(
-            "web_opportunity", "Web opportunity", raw, 0.0, 0.0,
+            "web_opportunity",
+            "Web opportunity",
+            raw,
+            0.0,
+            0.0,
             audit.problems[0] if audit.problems else "Website is unreachable",
         )
 
     # The opportunity is the gap between the current site and a good one.
     raw = max(0.0, 100.0 - audit.score)
     return ScoreComponent(
-        "web_opportunity", "Web opportunity", round(raw, 1), 0.0, 0.0,
+        "web_opportunity",
+        "Web opportunity",
+        round(raw, 1),
+        0.0,
+        0.0,
         f"Website scores {audit.score:.0f}/100 ({audit.status.display.lower()})",
     )
 
@@ -157,11 +177,19 @@ def _reachability(has_phone: bool, has_email: bool, audit: WebsiteAudit | None) 
 
     if not channels:
         return ScoreComponent(
-            "reachability", "Reachability", 0.0, 0.0, 0.0,
+            "reachability",
+            "Reachability",
+            0.0,
+            0.0,
+            0.0,
             "No phone, email, or form found — cannot be contacted",
         )
     return ScoreComponent(
-        "reachability", "Reachability", min(100.0, raw), 0.0, 0.0,
+        "reachability",
+        "Reachability",
+        min(100.0, raw),
+        0.0,
+        0.0,
         "Reachable by " + ", ".join(channels),
     )
 
@@ -175,7 +203,11 @@ def _business_activity(
 ) -> ScoreComponent:
     if status and status.upper() in {"CLOSED_PERMANENTLY", "PERMANENTLY_CLOSED"}:
         return ScoreComponent(
-            "business_activity", "Business activity", 0.0, 0.0, 0.0,
+            "business_activity",
+            "Business activity",
+            0.0,
+            0.0,
+            0.0,
             "Listing marked permanently closed",
         )
 
@@ -214,7 +246,11 @@ def _business_activity(
         notes.append("published hours")
 
     return ScoreComponent(
-        "business_activity", "Business activity", min(100.0, raw), 0.0, 0.0,
+        "business_activity",
+        "Business activity",
+        min(100.0, raw),
+        0.0,
+        0.0,
         "; ".join(notes),
     )
 
@@ -243,17 +279,18 @@ def _revenue_potential(
 
     label = niche.label if niche else "business"
     return ScoreComponent(
-        "revenue_potential", "Revenue potential", min(100.0, round(raw, 1)), 0.0, 0.0,
-        f"{label} with high project value" if ticket >= 0.8
-        else f"{label}, {scale}",
+        "revenue_potential",
+        "Revenue potential",
+        min(100.0, round(raw, 1)),
+        0.0,
+        0.0,
+        f"{label} with high project value" if ticket >= 0.8 else f"{label}, {scale}",
     )
 
 
 def _market_pressure(niche: Niche | None, review_count: int) -> ScoreComponent:
     if niche is None:
-        return ScoreComponent(
-            "market_pressure", "Market pressure", 50.0, 0.0, 0.0, "Unknown niche"
-        )
+        return ScoreComponent("market_pressure", "Market pressure", 50.0, 0.0, 0.0, "Unknown niche")
 
     # Demand says customers are searching; competition says rivals are already
     # capturing them. Both raise the urgency of fixing the website.
@@ -332,7 +369,10 @@ def _adjustments(
             # A site that is genuinely good was probably built recently by
             # someone else. Pitching a redesign here wastes a call.
             if audit.score >= 80 and audit.design_era and "current" in audit.design_era:
-                add("recently_redesigned_penalty", "site looks recently built and is performing well")
+                add(
+                    "recently_redesigned_penalty",
+                    "site looks recently built and is performing well",
+                )
 
     if not reachable_by_phone and not has_email and not (audit and audit.has_contact_form):
         add("no_contact_channel_penalty", "no way to contact this business")

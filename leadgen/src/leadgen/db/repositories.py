@@ -237,7 +237,9 @@ class AuditRepository:
         self.session.add(change)
         return change
 
-    async def recent_changes(self, days: int = 7, limit: int = 100) -> Sequence[WebsiteStatusChange]:
+    async def recent_changes(
+        self, days: int = 7, limit: int = 100
+    ) -> Sequence[WebsiteStatusChange]:
         cutoff = datetime.utcnow() - timedelta(days=days)
         stmt = (
             select(WebsiteStatusChange)
@@ -769,8 +771,9 @@ class GeoRepository:
     ) -> Sequence[GeoPlace]:
         stmt = (
             select(GeoPlace)
-            .where(GeoPlace.country_code == country_code.upper(),
-                   GeoPlace.population >= min_population)
+            .where(
+                GeoPlace.country_code == country_code.upper(), GeoPlace.population >= min_population
+            )
             .order_by(GeoPlace.population.desc())
             .limit(limit)
         )
@@ -877,7 +880,9 @@ class AnalyticsRepository:
             )
         ).scalar() or 0
         won = (
-            await self.session.execute(select(func.count(Lead.id)).where(Lead.status == LeadStatus.WON))
+            await self.session.execute(
+                select(func.count(Lead.id)).where(Lead.status == LeadStatus.WON)
+            )
         ).scalar() or 0
         lost = (
             await self.session.execute(
@@ -885,9 +890,7 @@ class AnalyticsRepository:
             )
         ).scalar() or 0
         avg_score = (
-            await self.session.execute(
-                select(func.avg(Lead.score)).where(Lead.qualified.is_(True))
-            )
+            await self.session.execute(select(func.avg(Lead.score)).where(Lead.qualified.is_(True)))
         ).scalar()
         revenue = (
             await self.session.execute(
@@ -1023,8 +1026,9 @@ class AnalyticsRepository:
             (
                 "Meeting",
                 select(func.count(Lead.id)).where(
-                    Lead.status.in_([LeadStatus.MEETING_BOOKED, LeadStatus.PROPOSAL_SENT,
-                                     LeadStatus.WON])
+                    Lead.status.in_(
+                        [LeadStatus.MEETING_BOOKED, LeadStatus.PROPOSAL_SENT, LeadStatus.WON]
+                    )
                 ),
             ),
             ("Won", select(func.count(Lead.id)).where(Lead.status == LeadStatus.WON)),

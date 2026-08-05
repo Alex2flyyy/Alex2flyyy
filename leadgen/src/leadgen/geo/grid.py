@@ -46,14 +46,10 @@ class BoundingBox:
         return Point((self.south + self.north) / 2, (self.west + self.east) / 2)
 
     def contains(self, point: Point) -> bool:
-        return (
-            self.south <= point.lat <= self.north and self.west <= point.lng <= self.east
-        )
+        return self.south <= point.lat <= self.north and self.west <= point.lng <= self.east
 
     def diagonal_km(self) -> float:
-        return haversine_km(
-            Point(self.south, self.west), Point(self.north, self.east)
-        )
+        return haversine_km(Point(self.south, self.west), Point(self.north, self.east))
 
 
 def haversine_km(a: Point, b: Point) -> float:
@@ -113,8 +109,8 @@ def hex_tile(center: Point, area_radius_km: float, cell_radius_km: float) -> lis
 
     spacing = cell_radius_km * math.sqrt(3)
     row_height = spacing * math.sqrt(3) / 2
-    rows = int(math.ceil(area_radius_km / row_height)) + 1
-    cols = int(math.ceil(area_radius_km / spacing)) + 1
+    rows = math.ceil(area_radius_km / row_height) + 1
+    cols = math.ceil(area_radius_km / spacing) + 1
 
     points: list[tuple[float, Point]] = []
     for row in range(-rows, rows + 1):
@@ -150,7 +146,7 @@ def cells_needed(area_radius_km: float, cell_radius_km: float) -> int:
     area = math.pi * area_radius_km**2
     # Hexagon inscribed around a circle of radius r has area 2*sqrt(3)*r^2.
     hex_area = 2 * math.sqrt(3) * cell_radius_km**2
-    return max(1, int(math.ceil(area / hex_area)))
+    return max(1, math.ceil(area / hex_area))
 
 
 def deduplicate_points(points: list[Point], min_separation_km: float) -> list[Point]:

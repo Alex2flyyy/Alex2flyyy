@@ -15,7 +15,6 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import Any
 
-
 # =============================================================================
 # Enumerations
 # =============================================================================
@@ -296,7 +295,7 @@ class WebsiteAudit:
 class ScoreComponent:
     key: str
     label: str
-    raw: float          # 0-100 before weighting
+    raw: float  # 0-100 before weighting
     weight: float
     contribution: float  # raw * weight
     explanation: str

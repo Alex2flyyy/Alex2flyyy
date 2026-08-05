@@ -13,6 +13,7 @@ into an hour of wall clock.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import random
 import ssl
 from dataclasses import dataclass, field
@@ -247,7 +248,7 @@ class HttpFetcher:
                     continue
                 return result
 
-            except Exception as exc:  # noqa: BLE001 - categorized below
+            except Exception as exc:
                 last_error = exc
                 kind = classify_error(exc)
                 # DNS and refused connections are stable facts about the host,
@@ -296,8 +297,11 @@ async def probe_ssl(hostname: str, port: int = 443, timeout: float = 8.0) -> dic
     socket to read it.
     """
     out: dict[str, Any] = {
-        "valid": False, "expires_at": None, "days_remaining": None,
-        "issuer": None, "error": None,
+        "valid": False,
+        "expires_at": None,
+        "days_remaining": None,
+        "issuer": None,
+        "error": None,
     }
     context = ssl.create_default_context()
     try:
@@ -308,7 +312,7 @@ async def probe_ssl(hostname: str, port: int = 443, timeout: float = 8.0) -> dic
     except ssl.SSLCertVerificationError as exc:
         out["error"] = f"certificate verification failed: {exc.verify_message or exc}"
         return out
-    except (OSError, asyncio.TimeoutError) as exc:
+    except (TimeoutError, OSError) as exc:
         out["error"] = str(exc)[:200]
         return out
 
@@ -326,9 +330,7 @@ async def probe_ssl(hostname: str, port: int = 443, timeout: float = 8.0) -> dic
             out["issuer"] = issuer.get("organizationName")
     finally:
         writer.close()
-        try:
+        with contextlib.suppress(OSError, ssl.SSLError):
             await writer.wait_closed()
-        except (OSError, ssl.SSLError):
-            pass
         _ = reader
     return out

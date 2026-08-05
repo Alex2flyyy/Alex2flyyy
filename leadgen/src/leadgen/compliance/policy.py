@@ -39,7 +39,7 @@ PLACES_CONTENT_MAX_CACHE_DAYS = 30
 class ComplianceFlags:
     can_email: bool = True
     can_call: bool = True
-    can_text: bool = False       # texting needs prior express consent. Default off.
+    can_text: bool = False  # texting needs prior express consent. Default off.
     notes: list[str] | None = None
 
 

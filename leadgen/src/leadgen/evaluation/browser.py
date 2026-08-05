@@ -36,7 +36,7 @@ from leadgen.logging import get_logger
 
 log = get_logger(__name__)
 
-MOBILE_VIEWPORT = {"width": 390, "height": 844}   # iPhone 14 class
+MOBILE_VIEWPORT = {"width": 390, "height": 844}  # iPhone 14 class
 DESKTOP_VIEWPORT = {"width": 1440, "height": 900}
 
 # Blocking these cuts render time roughly in half without changing layout.
@@ -143,13 +143,19 @@ _LAYOUT_PROBE = """
   }
 
   const foldText = Array.from(document.querySelectorAll('body *'))
-    .filter(el => { const r = el.getBoundingClientRect(); return r.top < window.innerHeight && r.top >= 0; })
+    .filter(el => {
+      const r = el.getBoundingClientRect();
+      return r.top < window.innerHeight && r.top >= 0;
+    })
     .slice(0, 200)
     .map(el => (el.childElementCount === 0 ? (el.textContent || '') : ''))
     .join(' ').trim();
 
   const heroCandidates = Array.from(document.querySelectorAll('img,[style*="background-image"]'))
-    .filter(el => { const r = el.getBoundingClientRect(); return r.top < 700 && r.width > 250 && r.height > 140; });
+    .filter(el => {
+      const r = el.getBoundingClientRect();
+      return r.top < 700 && r.width > 250 && r.height > 140;
+    });
 
   return {
     scrollWidth: Math.max(doc.scrollWidth, body.scrollWidth, Math.ceil(widest)),
@@ -201,9 +207,9 @@ class BrowserAuditor:
         self._browser = await self._playwright.chromium.launch(
             headless=self.headless,
             args=[
-                "--disable-dev-shm-usage",   # /dev/shm is tiny in containers
+                "--disable-dev-shm-usage",  # /dev/shm is tiny in containers
                 "--disable-gpu",
-                "--no-sandbox",              # required as non-root in Docker
+                "--no-sandbox",  # required as non-root in Docker
                 "--disable-background-timer-throttling",
                 "--disable-features=IsolateOrigins,site-per-process",
             ],
@@ -228,9 +234,7 @@ class BrowserAuditor:
         if self._browser is None:
             return RenderResult(ok=False, error="browser not started")
 
-        take_screenshots = (
-            self.settings.enable_screenshots if screenshots is None else screenshots
-        )
+        take_screenshots = self.settings.enable_screenshots if screenshots is None else screenshots
         timeout = timeout_ms or self.settings.audit_timeout_seconds * 1000
 
         async with self._semaphore:
@@ -239,10 +243,10 @@ class BrowserAuditor:
                     self._render(url, take_screenshots, timeout),
                     timeout=(timeout / 1000) + 15,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self.failures += 1
                 return RenderResult(ok=False, error="render timed out")
-            except Exception as exc:  # noqa: BLE001 - one bad site must not stop the run
+            except Exception as exc:
                 self.failures += 1
                 log.debug("browser.render_failed", url=url, error=str(exc))
                 return RenderResult(ok=False, error=str(exc)[:300])
@@ -368,7 +372,7 @@ class BrowserAuditor:
                 timeout=15000,
             )
             return str(path)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.debug("browser.screenshot_failed", url=url, error=str(exc))
             return None
 

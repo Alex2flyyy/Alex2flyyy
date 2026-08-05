@@ -100,9 +100,7 @@ class PipelineConfig:
 class DailyPipeline:
     def __init__(self, config: PipelineConfig | None = None) -> None:
         self.settings = get_settings()
-        self.config = config or PipelineConfig(
-            target_leads=self.settings.daily_lead_target
-        )
+        self.config = config or PipelineConfig(target_leads=self.settings.daily_lead_target)
         self.scoring = get_scoring()
         self.result = RunResult(run_id=None, run_date=date.today(), status=RunStatus.PENDING)
         self.quota = QuotaCounter(
@@ -158,7 +156,7 @@ class DailyPipeline:
                 RunStatus.COMPLETED if not self.result.errors else RunStatus.PARTIAL
             )
 
-        except Exception as exc:  # noqa: BLE001 - recorded, then re-raised context-free
+        except Exception as exc:
             self.result.status = RunStatus.FAILED
             self.result.errors.append(f"{type(exc).__name__}: {exc}")
             log.exception("pipeline.failed", error=str(exc))
@@ -222,7 +220,7 @@ class DailyPipeline:
                     found = await orchestrator.search_cell(
                         cell, niche, limit=self.config.per_cell_limit
                     )
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     self.result.errors.append(f"discover {cell.label}/{niche.key}: {exc}")
                     stage.failed += 1
                     continue
@@ -354,7 +352,7 @@ class DailyPipeline:
             async with semaphore:
                 try:
                     audit = await auditor.audit(business.website_url)
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     log.warning("audit.error", business=business.name, error=str(exc)[:200])
                     return business.id, None, []
 
@@ -369,7 +367,7 @@ class DailyPipeline:
                             audit.has_contact_form = True
                         if findings.social_links:
                             audit.social_links = {**findings.social_links, **audit.social_links}
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:
                         log.debug("contact.enrich_failed", error=str(exc)[:200])
                 return business.id, audit, contact_rows
 
@@ -499,13 +497,17 @@ class DailyPipeline:
 
                 audit = audits.get(business_id)
                 latest = await audit_repo.latest_for_business(business_id)
-                problems = list(audit.problems) if audit else list(latest.problems or []) if latest else []
+                problems = (
+                    list(audit.problems) if audit else list(latest.problems or []) if latest else []
+                )
                 website_score = audit.score if audit else (latest.score if latest else None)
 
                 input_hash = compute_input_hash(
                     name=business.name,
                     website=business.website_url,
-                    website_status=str(business.lead.website_status if business.lead else "unknown"),
+                    website_status=str(
+                        business.lead.website_status if business.lead else "unknown"
+                    ),
                     website_score=website_score,
                     problems=problems,
                     review_count=business.review_count,
@@ -550,7 +552,9 @@ class DailyPipeline:
                 if enrichment is None:
                     stage.failed += 1
                     continue
-                await stages.save_insight(session, business_id, enrichment, input_hash, self._run_id)
+                await stages.save_insight(
+                    session, business_id, enrichment, input_hash, self._run_id
+                )
                 stage.succeeded += 1
 
         self.result.enriched = stage.succeeded
@@ -592,8 +596,7 @@ class DailyPipeline:
                 target_leads=self.config.target_leads,
                 config_snapshot={
                     "per_cell_limit": self.config.per_cell_limit,
-                    "discovery_cap": self.config.discovery_cap
-                    or self.settings.daily_discovery_cap,
+                    "discovery_cap": self.config.discovery_cap or self.settings.daily_discovery_cap,
                     "use_browser": self.config.use_browser,
                     "use_pagespeed": self.config.use_pagespeed,
                     "use_ai": self.config.use_ai,

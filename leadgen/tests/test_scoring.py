@@ -163,7 +163,9 @@ class TestLeadScore:
         score_website(bad_audit)
         niche = get_niches().get("restaurants")
 
-        independent = score_lead(business(name="Maria's Taqueria"), bad_audit, niche, has_email=True)
+        independent = score_lead(
+            business(name="Maria's Taqueria"), bad_audit, niche, has_email=True
+        )
         chain = score_lead(business(name="Subway"), bad_audit, niche, has_email=True)
         assert chain.score < independent.score
 
@@ -176,16 +178,12 @@ class TestLeadScore:
             has_email=False,
         )
         assert result.qualified
-        assert any(
-            key == "facebook_page_as_website_bonus" for key, _, _ in result.adjustments
-        )
+        assert any(key == "facebook_page_as_website_bonus" for key, _, _ in result.adjustments)
 
     def test_score_bounds(self, bad_audit: WebsiteAudit) -> None:
         score_website(bad_audit)
         for niche_key in get_niches().keys:
-            result = score_lead(
-                business(), bad_audit, get_niches().get(niche_key), has_email=True
-            )
+            result = score_lead(business(), bad_audit, get_niches().get(niche_key), has_email=True)
             assert 0 <= result.score <= 100
 
     def test_reasons_are_populated(self, bad_audit: WebsiteAudit) -> None:

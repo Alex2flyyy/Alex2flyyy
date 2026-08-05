@@ -84,7 +84,21 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "C4", "SIM", "RUF"]
-ignore = ["B008", "RUF012"]
+ignore = [
+    "B008",     # function call in default — required by Typer and FastAPI
+    "RUF012",   # mutable class attrs need ClassVar — noisy with SQLAlchemy models
+    "RUF001",   # "ambiguous" unicode in strings: en/em dashes are intentional
+    "RUF002",   # same, in docstrings
+    "RUF003",   # same, in comments
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Typer expresses "repeatable option" as a list default. It is the documented
+# idiom and the value is never mutated.
+"src/leadgen/cli.py" = ["B006"]
+# HTML fixtures are copied from real pages; rewrapping them would change
+# what the parser under test actually sees.
+"tests/test_parser.py" = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"

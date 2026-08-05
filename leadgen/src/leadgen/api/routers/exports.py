@@ -47,8 +47,7 @@ async def destinations() -> dict[str, Any]:
         "crm_formats": sorted(CRM_MAPPINGS),
         "configured": {
             "google_sheets": bool(
-                settings.google_sheets_spreadsheet_id
-                and settings.google_sheets_credentials_file
+                settings.google_sheets_spreadsheet_id and settings.google_sheets_credentials_file
             ),
             "notion": bool(settings.notion_api_key and settings.notion_database_id),
             "airtable": bool(settings.airtable_api_key and settings.airtable_base_id),
@@ -98,7 +97,7 @@ async def create_export(payload: ExportRequest, session: DbSession) -> ExportOut
     except ExportUnavailable as exc:
         await job_repo.finish(job.id, status="failed", error=str(exc))
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         await job_repo.finish(job.id, status="failed", error=str(exc)[:500])
         log.exception("export.failed", destination=payload.destination)
         raise HTTPException(status_code=500, detail=f"export failed: {exc}") from exc
@@ -140,9 +139,7 @@ async def history(
 
 
 @router.get("/report/{report_date}", summary="Download a generated daily report")
-async def download_report(
-    report_date: date, session: DbSession, fmt: str = "html"
-) -> FileResponse:
+async def download_report(report_date: date, session: DbSession, fmt: str = "html") -> FileResponse:
     report = await ReportRepository(session).get(report_date)
     if report is None:
         raise HTTPException(status_code=404, detail=f"no report for {report_date}")

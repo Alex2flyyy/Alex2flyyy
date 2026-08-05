@@ -56,9 +56,7 @@ class Provider(abc.ABC):
         """Whether this provider is usable right now (credentials present)."""
 
     @abc.abstractmethod
-    async def search(
-        self, cell: SearchCell, niche: Niche, *, limit: int = 20
-    ) -> list[RawBusiness]:
+    async def search(self, cell: SearchCell, niche: Niche, *, limit: int = 20) -> list[RawBusiness]:
         """Find businesses of ``niche`` near ``cell``."""
 
     async def details(self, business: RawBusiness) -> RawBusiness:

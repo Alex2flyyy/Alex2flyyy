@@ -45,10 +45,13 @@ TECH_SIGNATURES: list[tuple[str, re.Pattern[str]]] = [
     # `/_next/static/` is the Next.js build output path and is by far the most
     # reliable React signal on a production build, where the library name never
     # appears in the bundle filename.
-    ("React", re.compile(
-        r"__NEXT_DATA__|/_next/static|react(?:-dom)?(?:\.production)?(?:\.min)?\.js|data-reactroot",
-        re.I,
-    )),
+    (
+        "React",
+        re.compile(
+            r"__NEXT_DATA__|/_next/static|react(?:-dom)?(?:\.production)?(?:\.min)?\.js|data-reactroot",
+            re.I,
+        ),
+    ),
     ("Vue", re.compile(r"vue(?:\.runtime)?(?:\.min)?\.js|data-v-[0-9a-f]{8}", re.I)),
     ("Angular", re.compile(r"ng-version|angular(?:\.min)?\.js", re.I)),
     ("Bootstrap", re.compile(r"bootstrap(?:\.min)?\.(?:css|js)", re.I)),
@@ -94,7 +97,12 @@ CTA_PHRASES = re.compile(
     re.I,
 )
 
-COPYRIGHT_RE = re.compile(r"(?:©|&copy;|copyright)\s*(?:\d{4}\s*[-–—]\s*)?(\d{4})", re.I)
+# The en and em dashes are intentional: real copyright lines write ranges as
+# "2019–2024" as often as "2019-2024".
+COPYRIGHT_RE = re.compile(
+    r"(?:©|&copy;|copyright)\s*(?:\d{4}\s*[-–—]\s*)?(\d{4})",
+    re.I,
+)
 
 PARKED_MARKERS = re.compile(
     r"(this domain (?:is|may be) for sale|buy this domain|domain (?:parking|is parked)|"
@@ -375,8 +383,15 @@ def _detect_tech(html: str, lower_html: str, page: ParsedPage) -> None:
     page.has_analytics = any(
         marker in lower_html
         for marker in (
-            "googletagmanager.com", "google-analytics.com", "gtag(", "ga(",
-            "plausible.io", "fathom", "matomo", "hotjar", "clarity.ms",
+            "googletagmanager.com",
+            "google-analytics.com",
+            "gtag(",
+            "ga(",
+            "plausible.io",
+            "fathom",
+            "matomo",
+            "hotjar",
+            "clarity.ms",
         )
     )
 

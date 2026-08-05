@@ -73,9 +73,7 @@ class AIClient:
     def _ensure_client(self) -> Any:
         if self._client is None:
             if not self.enabled:
-                raise AIUnavailable(
-                    "AI enrichment is disabled or ANTHROPIC_API_KEY is not set"
-                )
+                raise AIUnavailable("AI enrichment is disabled or ANTHROPIC_API_KEY is not set")
             from anthropic import AsyncAnthropic
 
             self._client = AsyncAnthropic(api_key=self.settings.anthropic_api_key)
@@ -117,12 +115,14 @@ class AIClient:
                         tools=[tool],
                         tool_choice={"type": "tool", "name": tool["name"]},
                     )
-                except Exception as exc:  # noqa: BLE001 - SDK exception types vary
+                except Exception as exc:
                     if not _retryable(exc) or attempt >= max_attempts:
                         self.errors += 1
                         raise AIUnavailable(f"Anthropic call failed: {exc}") from exc
                     delay = min(2**attempt, 16) * (0.5 + random.random())
-                    log.warning("ai.retry", attempt=attempt, delay=round(delay, 1), error=str(exc)[:200])
+                    log.warning(
+                        "ai.retry", attempt=attempt, delay=round(delay, 1), error=str(exc)[:200]
+                    )
                     await asyncio.sleep(delay)
                     continue
 
