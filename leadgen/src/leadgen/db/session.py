@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 from collections.abc import AsyncIterator
 
+from sqlalchemy.pool import NullPool
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -25,16 +26,26 @@ def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
         s = get_settings()
-        _engine = create_async_engine(
-            s.database_url,
-            echo=s.db_echo,
-            pool_size=s.db_pool_size,
-            max_overflow=s.db_max_overflow,
-            pool_pre_ping=True,   # nightly runs sit idle long enough for the DB
-            pool_recycle=1800,    # to drop connections; ping + recycle avoids it
-            future=True,
-        )
-        log.debug("engine.created", url=s.database_url.split("@")[-1])
+        kwargs: dict = {"echo": s.db_echo, "future": True}
+
+        if s.env == "test":
+            # No pooling under test. asyncpg binds a connection to the event
+            # loop that opened it, and the test suite runs a fresh loop per
+            # test while sharing this module-level engine. A pooled connection
+            # handed to a second loop raises "Task got Future attached to a
+            # different loop"; NullPool opens and closes per checkout, so it
+            # cannot happen.
+            kwargs["poolclass"] = NullPool
+        else:
+            kwargs.update(
+                pool_size=s.db_pool_size,
+                max_overflow=s.db_max_overflow,
+                pool_pre_ping=True,  # nightly runs idle long enough for the DB
+                pool_recycle=1800,   # to drop connections; ping + recycle avoids it
+            )
+
+        _engine = create_async_engine(s.database_url, **kwargs)
+        log.debug("engine.created", url=s.database_url.split("@")[-1], env=s.env)
     return _engine
 
 

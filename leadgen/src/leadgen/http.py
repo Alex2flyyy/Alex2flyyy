@@ -118,12 +118,24 @@ class HttpFetcher:
         self.user_agent = user_agent or settings.user_agent
         self.limiter = limiter or HostRateLimiter(settings.per_host_rps, settings.global_rps)
 
+        # HTTP/2 needs the optional `h2` package. It is declared in
+        # pyproject (`httpx[http2]`), but a partial or system install can
+        # still be missing it — degrade to HTTP/1.1 rather than refusing to
+        # start, since nothing here depends on HTTP/2.
+        try:
+            import h2  # noqa: F401
+
+            http2 = True
+        except ImportError:
+            http2 = False
+            log.debug("http.http2_unavailable", hint="pip install 'httpx[http2]' to enable")
+
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(self.timeout, connect=min(10.0, self.timeout)),
             follow_redirects=follow_redirects,
             max_redirects=6,
             verify=verify_ssl,
-            http2=True,
+            http2=http2,
             headers={**DEFAULT_HEADERS, "User-Agent": self.user_agent},
             limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
         )

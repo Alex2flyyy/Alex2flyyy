@@ -248,12 +248,20 @@ class TestLeads:
         )
         await session.flush()
 
-        assert await repo.search(min_score=80, qualified_only=True)
-        assert not await repo.search(min_score=95, qualified_only=True)
-        assert await repo.search(cities=["Pasadena"])
-        assert not await repo.search(cities=["Fresno"])
-        assert await repo.search(niches=["plumbing"])
-        assert await repo.search(query="bob")
+        # Assertions are scoped to the row this test created. Asserting that a
+        # filter returns *nothing* globally would fail the moment the database
+        # holds any other data, which it does in any real environment.
+        async def finds_it(**filters) -> bool:
+            rows = await repo.search(**filters, limit=1000)
+            return any(row.business_id == business.id for row in rows)
+
+        assert await finds_it(min_score=80, qualified_only=True)
+        assert not await finds_it(min_score=95, qualified_only=True)
+        assert await finds_it(cities=["Pasadena"])
+        assert not await finds_it(cities=["Fresno"])
+        assert await finds_it(niches=["plumbing"])
+        assert await finds_it(query="bob")
+        assert not await finds_it(query="zzz-no-such-business")
 
     async def test_count_matches_search(self, session, raw_business) -> None:
         business = await _make_business(session, raw_business)

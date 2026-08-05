@@ -374,6 +374,25 @@ def geo_import(
     )
 
 
+@geo_app.command("seed")
+def geo_seed() -> None:
+    """Load the bundled starter gazetteer (~250 US places, CA-weighted).
+
+    Enough to make city, county, and radius targets work immediately. For
+    genuine statewide or nationwide coverage, import a full gazetteer with
+    ``leadgen geo import`` — see docs/INSTALL.md.
+    """
+    seed_file = get_settings().config_dir / "seed_places.csv"
+    if not seed_file.exists():
+        console.print(f"[red]Bundled seed file missing: {seed_file}[/]")
+        raise typer.Exit(1)
+    geo_import(str(seed_file))
+    console.print(
+        "[yellow]Note:[/] this is a starter set. Nationwide targets need a full "
+        "gazetteer — see `leadgen geo import --help`."
+    )
+
+
 @geo_app.command("plan")
 def geo_plan(
     location: Annotated[str, typer.Argument(help="Location target key")],
