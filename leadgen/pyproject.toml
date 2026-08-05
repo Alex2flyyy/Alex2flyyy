@@ -1,0 +1,102 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "leadgen"
+version = "1.0.0"
+description = "Automated lead generation system for a website design business"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+dependencies = [
+    # --- Core / config ---
+    "pydantic>=2.7,<3",
+    "pydantic-settings>=2.3,<3",
+    "PyYAML>=6.0",
+    "python-dateutil>=2.9",
+
+    # --- HTTP / scraping ---
+    "httpx[http2]>=0.27",
+    "tenacity>=8.3",
+    "selectolax>=0.3.21",
+    "playwright>=1.45",
+    "tldextract>=5.1",
+
+    # --- Database ---
+    "SQLAlchemy>=2.0.30",
+    "asyncpg>=0.29",
+    "psycopg[binary]>=3.1",
+    "alembic>=1.13",
+
+    # --- API / dashboard ---
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+
+    # --- AI ---
+    "anthropic>=0.34",
+
+    # --- Exports ---
+    "openpyxl>=3.1",
+    "gspread>=6.1",
+    "google-auth>=2.30",
+
+    # --- Ops ---
+    "structlog>=24.2",
+    "typer>=0.12",
+    "rich>=13.7",
+    "phonenumbers>=8.13",
+    "email-validator>=2.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "respx>=0.21",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "types-PyYAML",
+    "freezegun>=1.5",
+]
+worker = [
+    "redis>=5.0",
+    "arq>=0.26",
+]
+
+[project.scripts]
+leadgen = "leadgen.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+leadgen = ["web/templates/*.html", "web/static/*", "reports/templates/*.html"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM", "RUF"]
+ignore = ["B008", "RUF012"]
+
+[tool.mypy]
+python_version = "3.11"
+plugins = []
+ignore_missing_imports = true
+warn_unused_ignores = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "integration: requires network or a live database",
+]

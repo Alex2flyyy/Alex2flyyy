@@ -1,0 +1,153 @@
+# =============================================================================
+# Scoring configuration
+# =============================================================================
+# Two scores exist and they mean different things. Keep them straight:
+#
+#   website_score  0-100, HIGHER IS BETTER for the business. A crisp modern
+#                  site scores 90. A 2004 table-layout site scores 20.
+#                  This is the number you show the prospect.
+#
+#   lead_score     0-100, HIGHER IS BETTER FOR YOU. It combines "how bad is
+#                  their web presence" (opportunity) with "can I actually
+#                  close and bill them" (reachability, spend, activity).
+#
+# Every weight below is a plain number and every component emits a human
+# sentence, so a lead's score is always explainable. Never ship an opaque
+# score to a salesperson — they will stop trusting the list.
+# =============================================================================
+
+website_score:
+  # Weights must sum to 1.0. Validated at load time.
+  weights:
+    availability: 0.16      # does it load at all, without errors
+    security: 0.12          # HTTPS, valid cert, no mixed content
+    mobile: 0.16            # responsive layout, viewport, tap targets
+    performance: 0.16       # LCP / CLS / TBT, page weight
+    seo: 0.13               # title, meta description, H1, canonical, sitemap
+    design: 0.15            # modernity signals, layout, typography, imagery
+    conversion: 0.08        # contact form, click-to-call, visible CTA
+    accessibility: 0.04     # alt text, contrast, labels, lang attribute
+
+  # A site is only "good" above this; below `poor_below` it is a prime target.
+  good_at_or_above: 70
+  poor_below: 50
+
+lead_score:
+  weights:
+    web_opportunity: 0.42   # inverse of website_score, or max for no website
+    reachability: 0.14      # phone / email / form present so you can contact
+    business_activity: 0.14 # reviews, recency, hours, claimed listing
+    revenue_potential: 0.16 # niche ticket size x apparent scale
+    market_pressure: 0.14   # local competition x local demand
+
+  # Bonus/penalty adjustments applied after the weighted sum, then clamped.
+  adjustments:
+    no_website_bonus: 12
+    ssl_missing_bonus: 6
+    site_down_bonus: 8
+    not_mobile_friendly_bonus: 7
+    facebook_page_as_website_bonus: 9   # social page standing in for a site
+    site_builder_free_tier_bonus: 5     # wix/weebly free subdomain
+    no_contact_channel_penalty: -18     # cannot reach them = cannot sell them
+    chain_or_franchise_penalty: -22     # corporate controls the website
+    permanently_closed_penalty: -100
+    recently_redesigned_penalty: -15    # modern stack + fresh copyright
+    high_rating_many_reviews_bonus: 5   # thriving business, can afford you
+
+  # Review-count buckets for the business_activity component.
+  activity:
+    reviews_floor: 3        # below this, probably inactive or brand new
+    reviews_strong: 40
+    reviews_saturated: 300  # diminishing returns past here
+
+  # Leads below this are stored but never surface in the daily top list.
+  qualification_threshold: 55
+
+# Chain/franchise detection. A match applies `chain_or_franchise_penalty`
+# because national marketing departments do not buy websites from you.
+chain_signals:
+  name_patterns:
+    - "(?i)\\bmcdonald'?s\\b"
+    - "(?i)\\bsubway\\b"
+    - "(?i)\\bstarbucks\\b"
+    - "(?i)\\btaco bell\\b"
+    - "(?i)\\bburger king\\b"
+    - "(?i)\\bdomino'?s\\b"
+    - "(?i)\\bpizza hut\\b"
+    - "(?i)\\bjiffy lube\\b"
+    - "(?i)\\bmidas\\b"
+    - "(?i)\\bfirestone\\b"
+    - "(?i)\\bsupercuts\\b"
+    - "(?i)\\bgreat clips\\b"
+    - "(?i)\\bplanet fitness\\b"
+    - "(?i)\\b24 hour fitness\\b"
+    - "(?i)\\bla fitness\\b"
+    - "(?i)\\bh&r block\\b"
+    - "(?i)\\bstate farm\\b"
+    - "(?i)\\ballstate\\b"
+    - "(?i)\\bgeico\\b"
+    - "(?i)\\bfarmers insurance\\b"
+    - "(?i)\\bterminix\\b"
+    - "(?i)\\borkin\\b"
+    - "(?i)\\bservpro\\b"
+    - "(?i)\\bre/?max\\b"
+    - "(?i)\\bcoldwell banker\\b"
+    - "(?i)\\bkeller williams\\b"
+    - "(?i)\\bcentury 21\\b"
+    - "(?i)\\baspen dental\\b"
+    - "(?i)\\bwestern dental\\b"
+    - "(?i)\\bbanfield\\b"
+    - "(?i)\\bvca animal\\b"
+    - "(?i)\\bkindercare\\b"
+    - "(?i)\\bu-?haul\\b"
+  # Domains that indicate a corporate/aggregator site rather than the
+  # business's own web presence.
+  domains:
+    - doordash.com
+    - grubhub.com
+    - ubereats.com
+    - postmates.com
+    - seamless.com
+    - slicelife.com
+    - toasttab.com
+    - square.site
+    - clover.com
+    - yelp.com
+    - facebook.com
+    - m.facebook.com
+    - instagram.com
+    - linktr.ee
+    - business.site        # Google Business Profile mini-site (deprecated)
+    - godaddysites.com
+    - wixsite.com
+    - weebly.com
+    - myshopify.com
+    - wordpress.com
+    - blogspot.com
+    - webs.com
+    - tripod.com
+    - angelfire.com
+
+# Domains that are a *social page used as the website*. These are not chains —
+# they are excellent prospects, because the owner clearly wants a web presence
+# and settled for a Facebook page.
+social_as_website_domains:
+  - facebook.com
+  - m.facebook.com
+  - instagram.com
+  - linktr.ee
+  - linkedin.com
+  - nextdoor.com
+
+# Free-tier site builders: real prospects, weak setups.
+free_builder_domains:
+  - wixsite.com
+  - weebly.com
+  - business.site
+  - godaddysites.com
+  - wordpress.com
+  - blogspot.com
+  - webnode.page
+  - jimdosite.com
+  - square.site
+  - myfreesites.net

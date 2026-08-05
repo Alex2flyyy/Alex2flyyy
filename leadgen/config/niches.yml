@@ -1,0 +1,393 @@
+# =============================================================================
+# Niche catalog
+# =============================================================================
+# Each niche maps a human label onto the machinery the discovery providers need:
+#
+#   place_types      Google Places "includedTypes" values (Places API New).
+#                    Empty list => text-search only.
+#   keywords         Free-text queries used for text search and for providers
+#                    that have no type taxonomy (OSM, SerpAPI).
+#   osm_tags         Overpass tag filters, "key=value".
+#   demand           0.0-1.0. How badly this niche needs a website to win
+#                    customers. Restaurants live and die by Maps + menu; a
+#                    machine shop with three industrial clients does not.
+#   competition      0.0-1.0. Local saturation. High competition raises the
+#                    value of standing out, so it *increases* lead score.
+#   ticket           0.0-1.0. Proxy for what the business can pay. Drives the
+#                    revenue-potential component of the lead score.
+#   web_expectation  What a "normal" site looks like in this niche. Used by the
+#                    AI enrichment prompt so the pitch is niche-appropriate.
+#
+# Add a niche by appending a block. Nothing else in the codebase needs editing.
+# =============================================================================
+
+niches:
+  - key: restaurants
+    label: Restaurants
+    place_types: [restaurant, meal_takeaway, cafe]
+    keywords: ["restaurant", "family restaurant", "taqueria", "diner"]
+    osm_tags: ["amenity=restaurant", "amenity=fast_food"]
+    demand: 0.95
+    competition: 0.95
+    ticket: 0.45
+    web_expectation: "menu, hours, online ordering link, photos, reservations"
+
+  - key: landscaping
+    label: Landscaping
+    place_types: []
+    keywords: ["landscaping", "landscaper", "lawn care", "yard maintenance"]
+    osm_tags: ["shop=garden_centre", "craft=gardener"]
+    demand: 0.85
+    competition: 0.8
+    ticket: 0.6
+    web_expectation: "before/after gallery, service area map, quote form"
+
+  - key: roofing
+    label: Roofing
+    place_types: [roofing_contractor]
+    keywords: ["roofing contractor", "roof repair", "roofer"]
+    osm_tags: ["craft=roofer"]
+    demand: 0.9
+    competition: 0.85
+    ticket: 0.95
+    web_expectation: "financing info, license #, storm-damage landing pages, quote form"
+
+  - key: hvac
+    label: HVAC
+    place_types: [hvac_contractor]
+    keywords: ["hvac contractor", "air conditioning repair", "heating and cooling"]
+    osm_tags: ["craft=hvac"]
+    demand: 0.9
+    competition: 0.85
+    ticket: 0.9
+    web_expectation: "emergency service CTA, maintenance plans, brand certifications"
+
+  - key: plumbing
+    label: Plumbing
+    place_types: [plumber]
+    keywords: ["plumber", "plumbing contractor", "drain cleaning"]
+    osm_tags: ["craft=plumber"]
+    demand: 0.9
+    competition: 0.85
+    ticket: 0.85
+    web_expectation: "24/7 phone CTA, service list, coupons, license #"
+
+  - key: electricians
+    label: Electricians
+    place_types: [electrician]
+    keywords: ["electrician", "electrical contractor"]
+    osm_tags: ["craft=electrician"]
+    demand: 0.85
+    competition: 0.8
+    ticket: 0.85
+    web_expectation: "license #, panel-upgrade / EV-charger pages, quote form"
+
+  - key: dentists
+    label: Dentists
+    place_types: [dentist]
+    keywords: ["dentist", "dental office", "family dentistry"]
+    osm_tags: ["amenity=dentist"]
+    demand: 0.9
+    competition: 0.9
+    ticket: 0.95
+    web_expectation: "insurance accepted, online booking, new-patient offer, team bios"
+
+  - key: chiropractors
+    label: Chiropractors
+    place_types: [chiropractor]
+    keywords: ["chiropractor", "chiropractic clinic"]
+    osm_tags: ["healthcare=chiropractor"]
+    demand: 0.85
+    competition: 0.8
+    ticket: 0.8
+    web_expectation: "new-patient special, online booking, conditions-treated pages"
+
+  - key: medical_clinics
+    label: Medical Clinics
+    place_types: [doctor, medical_lab]
+    keywords: ["medical clinic", "urgent care", "family practice"]
+    osm_tags: ["amenity=clinic", "amenity=doctors"]
+    demand: 0.85
+    competition: 0.75
+    ticket: 0.95
+    web_expectation: "insurance, patient portal, provider bios, ADA-accessible content"
+
+  - key: lawyers
+    label: Lawyers
+    place_types: [lawyer]
+    keywords: ["attorney", "law firm", "personal injury lawyer"]
+    osm_tags: ["office=lawyer"]
+    demand: 0.9
+    competition: 0.95
+    ticket: 1.0
+    web_expectation: "practice-area pages, case results, consultation form, bar credentials"
+
+  - key: realtors
+    label: Realtors
+    place_types: [real_estate_agency]
+    keywords: ["real estate agent", "realtor", "real estate office"]
+    osm_tags: ["office=estate_agent"]
+    demand: 0.85
+    competition: 0.95
+    ticket: 0.7
+    web_expectation: "IDX listings, neighborhood guides, valuation lead magnet"
+
+  - key: auto_repair
+    label: Auto Repair
+    place_types: [car_repair]
+    keywords: ["auto repair", "mechanic", "transmission shop"]
+    osm_tags: ["shop=car_repair"]
+    demand: 0.85
+    competition: 0.85
+    ticket: 0.6
+    web_expectation: "services, appointment request, warranty, coupons"
+
+  - key: car_detailing
+    label: Car Detailing
+    place_types: [car_wash]
+    keywords: ["car detailing", "mobile detailing", "auto detailing"]
+    osm_tags: ["shop=car_wash"]
+    demand: 0.8
+    competition: 0.7
+    ticket: 0.45
+    web_expectation: "package pricing, gallery, online booking"
+
+  - key: gyms
+    label: Gyms
+    place_types: [gym, fitness_center]
+    keywords: ["gym", "fitness center", "crossfit"]
+    osm_tags: ["leisure=fitness_centre"]
+    demand: 0.8
+    competition: 0.8
+    ticket: 0.6
+    web_expectation: "class schedule, membership pricing, free-trial CTA"
+
+  - key: personal_trainers
+    label: Personal Trainers
+    place_types: []
+    keywords: ["personal trainer", "fitness coach"]
+    osm_tags: []
+    demand: 0.75
+    competition: 0.7
+    ticket: 0.4
+    web_expectation: "transformation gallery, booking, packages"
+
+  - key: construction
+    label: Construction
+    place_types: [general_contractor]
+    keywords: ["general contractor", "construction company", "home remodeling"]
+    osm_tags: ["craft=builder", "office=construction_company"]
+    demand: 0.8
+    competition: 0.8
+    ticket: 1.0
+    web_expectation: "project portfolio, license #, financing, quote form"
+
+  - key: cleaning
+    label: Cleaning Companies
+    place_types: [laundry]
+    keywords: ["cleaning service", "house cleaning", "janitorial service", "maid service"]
+    osm_tags: ["shop=laundry", "office=cleaning"]
+    demand: 0.85
+    competition: 0.85
+    ticket: 0.5
+    web_expectation: "instant quote, recurring-plan pricing, online booking"
+
+  - key: pressure_washing
+    label: Pressure Washing
+    place_types: []
+    keywords: ["pressure washing", "power washing", "soft wash"]
+    osm_tags: []
+    demand: 0.85
+    competition: 0.6
+    ticket: 0.5
+    web_expectation: "before/after gallery, instant quote, service area"
+
+  - key: nail_salons
+    label: Nail Salons
+    place_types: [nail_salon]
+    keywords: ["nail salon", "manicure pedicure"]
+    osm_tags: ["shop=beauty"]
+    demand: 0.7
+    competition: 0.9
+    ticket: 0.35
+    web_expectation: "price list, gallery, online booking"
+
+  - key: hair_salons
+    label: Hair Salons
+    place_types: [hair_salon, beauty_salon]
+    keywords: ["hair salon", "hair stylist", "beauty salon"]
+    osm_tags: ["shop=hairdresser"]
+    demand: 0.75
+    competition: 0.9
+    ticket: 0.4
+    web_expectation: "stylist bios, service menu, online booking, gallery"
+
+  - key: barbers
+    label: Barbers
+    place_types: [barber_shop]
+    keywords: ["barber shop", "barber"]
+    osm_tags: ["shop=hairdresser"]
+    demand: 0.7
+    competition: 0.85
+    ticket: 0.3
+    web_expectation: "booking link, price list, hours"
+
+  - key: veterinarians
+    label: Veterinarians
+    place_types: [veterinary_care]
+    keywords: ["veterinarian", "animal hospital", "vet clinic"]
+    osm_tags: ["amenity=veterinary"]
+    demand: 0.85
+    competition: 0.7
+    ticket: 0.85
+    web_expectation: "appointment request, services, emergency info, new-client forms"
+
+  - key: daycares
+    label: Daycares
+    place_types: [child_care_agency, preschool]
+    keywords: ["daycare", "child care center", "preschool"]
+    osm_tags: ["amenity=childcare", "amenity=kindergarten"]
+    demand: 0.85
+    competition: 0.7
+    ticket: 0.7
+    web_expectation: "licensing, tuition, tour request, staff bios, safety info"
+
+  - key: churches
+    label: Churches
+    place_types: [church, place_of_worship]
+    keywords: ["church", "ministry", "congregation"]
+    osm_tags: ["amenity=place_of_worship"]
+    demand: 0.7
+    competition: 0.4
+    ticket: 0.45
+    web_expectation: "service times, sermons, giving link, events calendar"
+
+  - key: local_retail
+    label: Local Retail
+    place_types: [store, clothing_store, furniture_store]
+    keywords: ["boutique", "local shop", "retail store"]
+    osm_tags: ["shop=clothes", "shop=furniture", "shop=gift"]
+    demand: 0.8
+    competition: 0.8
+    ticket: 0.5
+    web_expectation: "product catalog or e-commerce, hours, location, inventory feel"
+
+  - key: manufacturing
+    label: Manufacturing
+    place_types: []
+    keywords: ["manufacturing company", "machine shop", "fabrication"]
+    osm_tags: ["man_made=works", "industrial=factory"]
+    demand: 0.6
+    competition: 0.4
+    ticket: 0.95
+    web_expectation: "capabilities, certifications (ISO/AS9100), RFQ form, spec sheets"
+
+  - key: local_services
+    label: Local Service Businesses
+    place_types: []
+    keywords: ["handyman", "local services", "appliance repair", "locksmith"]
+    osm_tags: ["craft=handicraft", "shop=locksmith"]
+    demand: 0.8
+    competition: 0.75
+    ticket: 0.5
+    web_expectation: "service list, service area, quote form, reviews"
+
+  - key: accountants
+    label: Accountants
+    place_types: [accounting]
+    keywords: ["accountant", "cpa", "tax preparation", "bookkeeping"]
+    osm_tags: ["office=accountant"]
+    demand: 0.8
+    competition: 0.75
+    ticket: 0.85
+    web_expectation: "service tiers, secure document portal, consultation booking"
+
+  - key: insurance
+    label: Insurance Agencies
+    place_types: [insurance_agency]
+    keywords: ["insurance agency", "insurance agent"]
+    osm_tags: ["office=insurance"]
+    demand: 0.8
+    competition: 0.85
+    ticket: 0.75
+    web_expectation: "quote form, carrier logos, agent bios, coverage explainers"
+
+  - key: pest_control
+    label: Pest Control
+    place_types: [pest_control_service]
+    keywords: ["pest control", "exterminator", "termite inspection"]
+    osm_tags: []
+    demand: 0.85
+    competition: 0.8
+    ticket: 0.7
+    web_expectation: "pest-specific pages, plan pricing, free-inspection CTA"
+
+  - key: flooring
+    label: Flooring Companies
+    place_types: [flooring_store]
+    keywords: ["flooring company", "hardwood flooring", "carpet installation"]
+    osm_tags: ["shop=flooring"]
+    demand: 0.8
+    competition: 0.7
+    ticket: 0.85
+    web_expectation: "product gallery, room visualizer, estimate form, financing"
+
+  - key: painting
+    label: Painting Contractors
+    place_types: [painter]
+    keywords: ["painting contractor", "house painter", "commercial painting"]
+    osm_tags: ["craft=painter"]
+    demand: 0.85
+    competition: 0.8
+    ticket: 0.7
+    web_expectation: "portfolio, free-estimate form, interior/exterior pages"
+
+  - key: window_installers
+    label: Window Installers
+    place_types: []
+    keywords: ["window installation", "window replacement", "glass company"]
+    osm_tags: ["craft=window_construction"]
+    demand: 0.8
+    competition: 0.7
+    ticket: 0.9
+    web_expectation: "energy-efficiency content, financing, rebate info, quote form"
+
+  - key: solar
+    label: Solar Companies
+    place_types: [solar_contractor]
+    keywords: ["solar installer", "solar panel company", "solar energy"]
+    osm_tags: []
+    demand: 0.85
+    competition: 0.85
+    ticket: 1.0
+    web_expectation: "savings calculator, incentive explainers, financing, consult booking"
+
+  - key: movers
+    label: Movers
+    place_types: [moving_company]
+    keywords: ["moving company", "movers", "local moving service"]
+    osm_tags: []
+    demand: 0.85
+    competition: 0.8
+    ticket: 0.6
+    web_expectation: "instant quote, DOT/CAL-T #, service areas, reviews"
+
+  - key: wedding_venues
+    label: Wedding Venues
+    place_types: [event_venue, wedding_venue]
+    keywords: ["wedding venue", "event venue", "banquet hall"]
+    osm_tags: ["amenity=events_venue"]
+    demand: 0.95
+    competition: 0.75
+    ticket: 0.9
+    web_expectation: "photo galleries, capacity/pricing sheets, tour booking, virtual tour"
+
+  - key: photographers
+    label: Photographers
+    place_types: []
+    keywords: ["photographer", "photography studio", "wedding photographer"]
+    osm_tags: ["shop=photo", "craft=photographer"]
+    demand: 0.9
+    competition: 0.9
+    ticket: 0.5
+    web_expectation: "portfolio galleries, packages, inquiry form, fast image loading"
