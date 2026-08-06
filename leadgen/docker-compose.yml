@@ -1,0 +1,84 @@
+name: leadgen
+
+x-app-env: &app-env
+  LEADGEN_DATABASE_URL: postgresql+asyncpg://leadgen:${POSTGRES_PASSWORD:-leadgen}@postgres:5432/leadgen
+  LEADGEN_ENV: ${LEADGEN_ENV:-production}
+  LEADGEN_LOG_FORMAT: ${LEADGEN_LOG_FORMAT:-json}
+  LEADGEN_SCREENSHOT_DIR: /app/data/screenshots
+  LEADGEN_EXPORT_DIR: /app/data/exports
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: leadgen
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-leadgen}
+      POSTGRES_DB: leadgen
+      # C collation keeps b-tree index ordering stable and fast for the
+      # normalized-name lookups the deduper leans on.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leadgen -d leadgen"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build:
+      context: .
+      target: base
+    env_file: [.env]
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    env_file: [.env]
+    environment: *app-env
+    ports:
+      - "${LEADGEN_API_PORT:-8000}:8000"
+    volumes:
+      - appdata:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # Ticks once an hour and runs the pipeline when the local clock reaches the
+  # configured hour.  Keeps scheduling inside the stack so a self-hosted deploy
+  # needs no host crontab; disable this service if you drive runs from GitHub
+  # Actions or an external scheduler instead.
+  scheduler:
+    build:
+      context: .
+      target: base
+    restart: unless-stopped
+    env_file: [.env]
+    environment:
+      <<: *app-env
+      LEADGEN_SCHEDULE_HOUR: ${LEADGEN_SCHEDULE_HOUR:-6}
+    volumes:
+      - appdata:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    command: ["leadgen", "scheduler"]
+
+volumes:
+  pgdata:
+  appdata:

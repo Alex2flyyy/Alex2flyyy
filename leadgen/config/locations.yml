@@ -1,0 +1,158 @@
+# =============================================================================
+# Location targets
+# =============================================================================
+# A "target" is a named geographic scope you can point the pipeline at:
+#
+#   leadgen run-daily --location socal_metro --niche roofing
+#
+# Six scope kinds are supported:
+#
+#   nation   country_code: US
+#   state    state: CA                       (USPS abbreviation)
+#   county   county: "Los Angeles"  state: CA
+#   city     city: "Pasadena"       state: CA
+#   zip      zips: ["91101", "91103"]        (any number)
+#   radius   center: "Pasadena, CA" OR lat/lng, radius_miles: 25
+#
+# Large scopes (nation/state/county) are NOT blind-tiled — that would burn a
+# fortune in API calls on empty desert. They expand into search cells centered
+# on real population centers drawn from the `geo_places` table, ordered by
+# population, capped by `max_cells`. Import a full gazetteer once with
+# `leadgen geo import <csv>` and every scope in the country becomes available.
+#
+# cell_radius_m controls the radius of each individual provider search.
+# Google Places caps a nearby search at 20 results per call, so a dense urban
+# cell wants a SMALL radius (1500-3000m) to avoid truncation, while a rural
+# cell can use 15000m+ without losing anything.
+# =============================================================================
+
+defaults:
+  cell_radius_m: 4000
+  max_cells: 40
+  min_population: 2000
+
+targets:
+  # ---------------------------------------------------------------- national
+  united_states:
+    label: Entire United States
+    kind: nation
+    country_code: US
+    cell_radius_m: 6000
+    max_cells: 250
+    min_population: 25000
+
+  # ------------------------------------------------------------------- state
+  california:
+    label: Entire California
+    kind: state
+    state: CA
+    cell_radius_m: 5000
+    max_cells: 150
+    min_population: 10000
+
+  texas:
+    label: Entire Texas
+    kind: state
+    state: TX
+    cell_radius_m: 5000
+    max_cells: 150
+    min_population: 10000
+
+  # ------------------------------------------------------------------ county
+  los_angeles_county:
+    label: Los Angeles County, CA
+    kind: county
+    county: Los Angeles
+    state: CA
+    cell_radius_m: 3000
+    max_cells: 90
+
+  orange_county:
+    label: Orange County, CA
+    kind: county
+    county: Orange
+    state: CA
+    cell_radius_m: 3000
+    max_cells: 60
+
+  san_bernardino_county:
+    label: San Bernardino County, CA
+    kind: county
+    county: San Bernardino
+    state: CA
+    cell_radius_m: 5000
+    max_cells: 60
+
+  riverside_county:
+    label: Riverside County, CA
+    kind: county
+    county: Riverside
+    state: CA
+    cell_radius_m: 5000
+    max_cells: 60
+
+  # -------------------------------------------------------------------- city
+  pasadena:
+    label: Pasadena, CA
+    kind: city
+    city: Pasadena
+    state: CA
+    cell_radius_m: 2500
+    max_cells: 12
+
+  long_beach:
+    label: Long Beach, CA
+    kind: city
+    city: Long Beach
+    state: CA
+    cell_radius_m: 2500
+    max_cells: 20
+
+  # ------------------------------------------------------------------ radius
+  # The default day-to-day target: everything within 25 miles of home base.
+  home_base_25mi:
+    label: 25 miles around Pasadena, CA
+    kind: radius
+    center: "Pasadena, CA"
+    radius_miles: 25
+    cell_radius_m: 4000
+    max_cells: 45
+
+  socal_metro:
+    label: Greater Los Angeles metro (60 mi)
+    kind: radius
+    center: "Los Angeles, CA"
+    radius_miles: 60
+    cell_radius_m: 5000
+    max_cells: 120
+
+  # --------------------------------------------------------------------- zip
+  san_gabriel_valley_zips:
+    label: San Gabriel Valley ZIP codes
+    kind: zip
+    zips:
+      - "91101"
+      - "91103"
+      - "91105"
+      - "91106"
+      - "91107"
+      - "91702"
+      - "91706"
+      - "91722"
+      - "91723"
+      - "91724"
+      - "91731"
+      - "91732"
+      - "91733"
+      - "91744"
+      - "91746"
+      - "91754"
+      - "91770"
+      - "91775"
+      - "91776"
+      - "91780"
+      - "91789"
+      - "91790"
+      - "91791"
+      - "91792"
+    cell_radius_m: 2500

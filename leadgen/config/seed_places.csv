@@ -1,0 +1,255 @@
+city,state_id,county_name,lat,lng,population
+Los Angeles,CA,Los Angeles,34.0522,-118.2437,3898747
+San Diego,CA,San Diego,32.7157,-117.1611,1386932
+San Jose,CA,Santa Clara,37.3382,-121.8863,1013240
+San Francisco,CA,San Francisco,37.7749,-122.4194,873965
+Fresno,CA,Fresno,36.7378,-119.7871,542107
+Sacramento,CA,Sacramento,38.5816,-121.4944,524943
+Long Beach,CA,Los Angeles,33.7701,-118.1937,466742
+Oakland,CA,Alameda,37.8044,-122.2712,440646
+Bakersfield,CA,Kern,35.3733,-119.0187,403455
+Anaheim,CA,Orange,33.8366,-117.9143,346824
+Santa Ana,CA,Orange,33.7455,-117.8677,310227
+Riverside,CA,Riverside,33.9806,-117.3755,314998
+Stockton,CA,San Joaquin,37.9577,-121.2908,320804
+Irvine,CA,Orange,33.6846,-117.8265,307670
+Chula Vista,CA,San Diego,32.6401,-117.0842,275487
+Fremont,CA,Alameda,37.5485,-121.9886,230504
+San Bernardino,CA,San Bernardino,34.1083,-117.2898,222101
+Modesto,CA,Stanislaus,37.6391,-120.9969,218464
+Fontana,CA,San Bernardino,34.0922,-117.4350,208393
+Moreno Valley,CA,Riverside,33.9425,-117.2297,208634
+Santa Clarita,CA,Los Angeles,34.3917,-118.5426,228673
+Huntington Beach,CA,Orange,33.6595,-117.9988,198711
+Glendale,CA,Los Angeles,34.1425,-118.2551,196543
+Oxnard,CA,Ventura,34.1975,-119.1771,202063
+Ontario,CA,San Bernardino,34.0633,-117.6509,175265
+Rancho Cucamonga,CA,San Bernardino,34.1064,-117.5931,174453
+Elk Grove,CA,Sacramento,38.4088,-121.3716,176124
+Corona,CA,Riverside,33.8753,-117.5664,157136
+Lancaster,CA,Los Angeles,34.6868,-118.1542,173516
+Palmdale,CA,Los Angeles,34.5794,-118.1165,169450
+Salinas,CA,Monterey,36.6777,-121.6555,163542
+Hayward,CA,Alameda,37.6688,-122.0808,162954
+Pomona,CA,Los Angeles,34.0551,-117.7500,151713
+Escondido,CA,San Diego,33.1192,-117.0864,151038
+Sunnyvale,CA,Santa Clara,37.3688,-122.0363,155805
+Torrance,CA,Los Angeles,33.8358,-118.3406,147067
+Pasadena,CA,Los Angeles,34.1478,-118.1445,138699
+Orange,CA,Orange,33.7879,-117.8531,139911
+Fullerton,CA,Orange,33.8704,-117.9243,143617
+Roseville,CA,Placer,38.7521,-121.2880,147773
+Visalia,CA,Tulare,36.3302,-119.2921,141384
+Concord,CA,Contra Costa,37.9780,-122.0311,125410
+Thousand Oaks,CA,Ventura,34.1706,-118.8376,126966
+Simi Valley,CA,Ventura,34.2694,-118.7815,126356
+Santa Rosa,CA,Sonoma,38.4404,-122.7141,178127
+Victorville,CA,San Bernardino,34.5362,-117.2928,134810
+Vallejo,CA,Solano,38.1041,-122.2566,126090
+Berkeley,CA,Alameda,37.8715,-122.2730,124321
+Fairfield,CA,Solano,38.2494,-122.0400,119881
+Richmond,CA,Contra Costa,37.9358,-122.3477,116448
+Murrieta,CA,Riverside,33.5539,-117.2139,110949
+Antioch,CA,Contra Costa,38.0049,-121.8058,115291
+Temecula,CA,Riverside,33.4936,-117.1484,110003
+Norwalk,CA,Los Angeles,33.9022,-118.0817,102773
+Daly City,CA,San Mateo,37.6879,-122.4702,104901
+Burbank,CA,Los Angeles,34.1808,-118.3090,107337
+El Monte,CA,Los Angeles,34.0686,-118.0276,109450
+Rialto,CA,San Bernardino,34.1064,-117.3703,104026
+Jurupa Valley,CA,Riverside,33.9971,-117.4854,105053
+Inglewood,CA,Los Angeles,33.9617,-118.3531,107762
+Vista,CA,San Diego,33.2000,-117.2425,98381
+Carlsbad,CA,San Diego,33.1581,-117.3506,114746
+San Mateo,CA,San Mateo,37.5630,-122.3255,105661
+Compton,CA,Los Angeles,33.8958,-118.2201,95740
+Mission Viejo,CA,Orange,33.6000,-117.6719,93653
+South Gate,CA,Los Angeles,33.9547,-118.2120,94396
+Vacaville,CA,Solano,38.3566,-121.9877,102386
+Carson,CA,Los Angeles,33.8317,-118.2820,95558
+Hesperia,CA,San Bernardino,34.4264,-117.3009,99818
+Santa Monica,CA,Los Angeles,34.0195,-118.4912,93076
+Westminster,CA,Orange,33.7514,-117.9940,90876
+Redding,CA,Shasta,40.5865,-122.3917,93611
+Santa Barbara,CA,Santa Barbara,34.4208,-119.6982,88665
+Chico,CA,Butte,39.7285,-121.8375,101475
+Newport Beach,CA,Orange,33.6189,-117.9298,85239
+San Marcos,CA,San Diego,33.1434,-117.1661,94833
+Whittier,CA,Los Angeles,33.9792,-118.0328,87306
+Hawthorne,CA,Los Angeles,33.9164,-118.3526,88083
+Citrus Heights,CA,Sacramento,38.7071,-121.2810,87583
+Alhambra,CA,Los Angeles,34.0953,-118.1270,82868
+Tracy,CA,San Joaquin,37.7397,-121.4252,93000
+Livermore,CA,Alameda,37.6819,-121.7680,87955
+Buena Park,CA,Orange,33.8675,-117.9981,81788
+Lakewood,CA,Los Angeles,33.8536,-118.1339,82496
+Merced,CA,Merced,37.3022,-120.4830,86333
+Hemet,CA,Riverside,33.7475,-116.9720,89833
+Chino,CA,San Bernardino,34.0122,-117.6889,91403
+Menifee,CA,Riverside,33.6971,-117.1850,102527
+Indio,CA,Riverside,33.7206,-116.2156,89137
+Redwood City,CA,San Mateo,37.4852,-122.2364,84292
+Lake Forest,CA,Orange,33.6470,-117.6892,85858
+Napa,CA,Napa,38.2975,-122.2869,79246
+Bellflower,CA,Los Angeles,33.8817,-118.1170,79190
+Redlands,CA,San Bernardino,34.0556,-117.1825,73168
+Chino Hills,CA,San Bernardino,33.9898,-117.7326,78411
+Baldwin Park,CA,Los Angeles,34.0853,-117.9609,72176
+Upland,CA,San Bernardino,34.0975,-117.6484,79040
+San Rafael,CA,Marin,37.9735,-122.5311,61271
+Yuba City,CA,Sutter,39.1404,-121.6169,70117
+Turlock,CA,Stanislaus,37.4947,-120.8466,72740
+Perris,CA,Riverside,33.7825,-117.2286,78700
+Manteca,CA,San Joaquin,37.7974,-121.2161,83498
+Milpitas,CA,Santa Clara,37.4323,-121.8996,80273
+Union City,CA,Alameda,37.5934,-122.0439,70143
+Palo Alto,CA,Santa Clara,37.4419,-122.1430,68572
+Davis,CA,Yolo,38.5449,-121.7405,66850
+Camarillo,CA,Ventura,34.2164,-119.0376,70741
+San Luis Obispo,CA,San Luis Obispo,35.2828,-120.6596,47063
+El Cajon,CA,San Diego,32.7948,-116.9625,106215
+Oceanside,CA,San Diego,33.1959,-117.3795,174068
+Clovis,CA,Fresno,36.8252,-119.7029,120124
+Folsom,CA,Sacramento,38.6779,-121.1761,80454
+Rancho Cordova,CA,Sacramento,38.5891,-121.3027,79332
+Cupertino,CA,Santa Clara,37.3230,-122.0322,60381
+Monterey,CA,Monterey,36.6002,-121.8947,30218
+Eureka,CA,Humboldt,40.8021,-124.1637,26512
+El Centro,CA,Imperial,32.7920,-115.5631,44322
+Ukiah,CA,Mendocino,39.1502,-123.2078,16607
+Auburn,CA,Placer,38.8966,-121.0769,14282
+Sonora,CA,Tuolumne,37.9841,-120.3822,4924
+Placerville,CA,El Dorado,38.7296,-120.7985,10998
+Hanford,CA,Kings,36.3275,-119.6457,57990
+Madera,CA,Madera,36.9613,-120.0607,66224
+Lodi,CA,San Joaquin,38.1341,-121.2722,66348
+Watsonville,CA,Santa Cruz,36.9102,-121.7569,52590
+Santa Cruz,CA,Santa Cruz,36.9741,-122.0308,62956
+Gilroy,CA,Santa Clara,37.0058,-121.5683,59520
+Petaluma,CA,Sonoma,38.2324,-122.6367,59776
+Novato,CA,Marin,38.1074,-122.5697,53225
+Marysville,CA,Yuba,39.1457,-121.5914,12508
+Susanville,CA,Lassen,40.4163,-120.6530,15165
+Barstow,CA,San Bernardino,34.8958,-117.0173,25415
+Palm Springs,CA,Riverside,33.8303,-116.5453,44575
+New York,NY,New York,40.7128,-74.0060,8804190
+Chicago,IL,Cook,41.8781,-87.6298,2746388
+Houston,TX,Harris,29.7604,-95.3698,2304580
+Phoenix,AZ,Maricopa,33.4484,-112.0740,1608139
+Philadelphia,PA,Philadelphia,39.9526,-75.1652,1603797
+San Antonio,TX,Bexar,29.4241,-98.4936,1434625
+Dallas,TX,Dallas,32.7767,-96.7970,1304379
+Austin,TX,Travis,30.2672,-97.7431,961855
+Jacksonville,FL,Duval,30.3322,-81.6557,949611
+Fort Worth,TX,Tarrant,32.7555,-97.3308,918915
+Columbus,OH,Franklin,39.9612,-82.9988,905748
+Charlotte,NC,Mecklenburg,35.2271,-80.8431,874579
+Indianapolis,IN,Marion,39.7684,-86.1581,887642
+Seattle,WA,King,47.6062,-122.3321,737015
+Denver,CO,Denver,39.7392,-104.9903,715522
+Washington,DC,District of Columbia,38.9072,-77.0369,689545
+Boston,MA,Suffolk,42.3601,-71.0589,675647
+Nashville,TN,Davidson,36.1627,-86.7816,689447
+Detroit,MI,Wayne,42.3314,-83.0458,639111
+Portland,OR,Multnomah,45.5152,-122.6784,652503
+Las Vegas,NV,Clark,36.1699,-115.1398,641903
+Memphis,TN,Shelby,35.1495,-90.0490,633104
+Louisville,KY,Jefferson,38.2527,-85.7585,633045
+Baltimore,MD,Baltimore City,39.2904,-76.6122,585708
+Milwaukee,WI,Milwaukee,43.0389,-87.9065,577222
+Albuquerque,NM,Bernalillo,35.0844,-106.6504,564559
+Tucson,AZ,Pima,32.2226,-110.9747,542629
+Atlanta,GA,Fulton,33.7490,-84.3880,498715
+Kansas City,MO,Jackson,39.0997,-94.5786,508090
+Miami,FL,Miami-Dade,25.7617,-80.1918,442241
+Raleigh,NC,Wake,35.7796,-78.6382,467665
+Omaha,NE,Douglas,41.2565,-95.9345,486051
+Minneapolis,MN,Hennepin,44.9778,-93.2650,429954
+Tulsa,OK,Tulsa,36.1540,-95.9928,413066
+Oklahoma City,OK,Oklahoma,35.4676,-97.5164,681054
+Cleveland,OH,Cuyahoga,41.4993,-81.6944,372624
+Wichita,KS,Sedgwick,37.6872,-97.3301,397532
+Arlington,TX,Tarrant,32.7357,-97.1081,394266
+New Orleans,LA,Orleans,29.9511,-90.0715,383997
+Tampa,FL,Hillsborough,27.9506,-82.4572,384959
+Honolulu,HI,Honolulu,21.3069,-157.8583,350964
+Aurora,CO,Arapahoe,39.7294,-104.8319,386261
+Santa Fe,NM,Santa Fe,35.6870,-105.9378,87505
+Salt Lake City,UT,Salt Lake,40.7608,-111.8910,199723
+Boise,ID,Ada,43.6150,-116.2023,235684
+Reno,NV,Washoe,39.5296,-119.8138,264165
+Spokane,WA,Spokane,47.6588,-117.4260,228989
+Tacoma,WA,Pierce,47.2529,-122.4443,219346
+Birmingham,AL,Jefferson,33.5186,-86.8104,200733
+Richmond,VA,Richmond City,37.5407,-77.4360,226610
+Des Moines,IA,Polk,41.5868,-93.6250,214133
+Little Rock,AR,Pulaski,34.7465,-92.2896,202591
+Grand Rapids,MI,Kent,42.9634,-85.6681,198917
+Providence,RI,Providence,41.8240,-71.4128,190934
+Charleston,SC,Charleston,32.7765,-79.9311,150227
+Savannah,GA,Chatham,32.0809,-81.0912,147780
+Chattanooga,TN,Hamilton,35.0456,-85.3097,181099
+Knoxville,TN,Knox,35.9606,-83.9207,190740
+Columbia,SC,Richland,34.0007,-81.0348,136632
+Fort Lauderdale,FL,Broward,26.1224,-80.1373,182760
+Orlando,FL,Orange,28.5383,-81.3792,307573
+St. Petersburg,FL,Pinellas,27.7676,-82.6403,258308
+Buffalo,NY,Erie,42.8864,-78.8784,278349
+Pittsburgh,PA,Allegheny,40.4406,-79.9959,302971
+Cincinnati,OH,Hamilton,39.1031,-84.5120,309317
+St. Louis,MO,St. Louis City,38.6270,-90.1994,301578
+Newark,NJ,Essex,40.7357,-74.1724,311549
+Jersey City,NJ,Hudson,40.7178,-74.0431,292449
+Anchorage,AK,Anchorage,61.2181,-149.9003,291247
+Lexington,KY,Fayette,38.0406,-84.5037,322570
+Henderson,NV,Clark,36.0395,-114.9817,317610
+Chandler,AZ,Maricopa,33.3062,-111.8413,275987
+Scottsdale,AZ,Maricopa,33.4942,-111.9261,241361
+Mesa,AZ,Maricopa,33.4152,-111.8315,504258
+Gilbert,AZ,Maricopa,33.3528,-111.7890,267918
+Plano,TX,Collin,33.0198,-96.6989,285494
+Irving,TX,Dallas,32.8140,-96.9489,256684
+Laredo,TX,Webb,27.5306,-99.4803,255205
+Lubbock,TX,Lubbock,33.5779,-101.8552,257141
+El Paso,TX,El Paso,31.7619,-106.4850,678815
+Corpus Christi,TX,Nueces,27.8006,-97.3964,317863
+Durham,NC,Durham,35.9940,-78.8986,283506
+Greensboro,NC,Guilford,36.0726,-79.7920,299035
+Winston-Salem,NC,Forsyth,36.0999,-80.2442,249545
+Norfolk,VA,Norfolk City,36.8508,-76.2859,238005
+Virginia Beach,VA,Virginia Beach City,36.8529,-75.9780,459470
+Madison,WI,Dane,43.0731,-89.4012,269840
+Toledo,OH,Lucas,41.6528,-83.5379,270871
+Fort Wayne,IN,Allen,41.0793,-85.1394,263886
+Akron,OH,Summit,41.0814,-81.5190,190469
+Rochester,NY,Monroe,43.1566,-77.6088,211328
+Syracuse,NY,Onondaga,43.0481,-76.1474,148620
+Albany,NY,Albany,42.6526,-73.7562,99224
+Hartford,CT,Hartford,41.7658,-72.6734,121054
+New Haven,CT,New Haven,41.3083,-72.9279,134023
+Bridgeport,CT,Fairfield,41.1792,-73.1894,148654
+Worcester,MA,Worcester,42.2626,-71.8023,206518
+Springfield,MA,Hampden,42.1015,-72.5898,155929
+Portland,ME,Cumberland,43.6591,-70.2568,68408
+Manchester,NH,Hillsborough,42.9956,-71.4548,115644
+Burlington,VT,Chittenden,44.4759,-73.2121,44743
+Wilmington,DE,New Castle,39.7391,-75.5398,70898
+Allentown,PA,Lehigh,40.6084,-75.4902,125845
+Sioux Falls,SD,Minnehaha,43.5460,-96.7313,192517
+Fargo,ND,Cass,46.8772,-96.7898,125990
+Billings,MT,Yellowstone,45.7833,-108.5007,117116
+Cheyenne,WY,Laramie,41.1400,-104.8202,65132
+Jackson,MS,Hinds,32.2988,-90.1848,153701
+Mobile,AL,Mobile,30.6954,-88.0399,187041
+Montgomery,AL,Montgomery,32.3668,-86.3000,200603
+Shreveport,LA,Caddo,32.5252,-93.7502,187593
+Baton Rouge,LA,East Baton Rouge,30.4515,-91.1871,227470
+Springfield,MO,Greene,37.2090,-93.2923,169176
+Fayetteville,AR,Washington,36.0822,-94.1719,93949
+Colorado Springs,CO,El Paso,38.8339,-104.8214,478961
+Fort Collins,CO,Larimer,40.5853,-105.0844,169810
+Provo,UT,Utah,40.2338,-111.6585,115162
+Eugene,OR,Lane,44.0521,-123.0868,176654
+Salem,OR,Marion,44.9429,-123.0351,175535
+Bellevue,WA,King,47.6101,-122.2015,151854
+Vancouver,WA,Clark,45.6387,-122.6615,190915

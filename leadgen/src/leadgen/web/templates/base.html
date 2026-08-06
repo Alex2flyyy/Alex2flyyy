@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}leadgen{% endblock %}</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📍</text></svg>">
+<style>
+:root {
+  --bg:#f5f6f8; --card:#fff; --ink:#12161d; --muted:#5f6875; --line:#e2e6ec;
+  --accent:#2563eb; --accent-soft:rgba(37,99,235,.1);
+  --hot:#dc2626; --warm:#ea580c; --good:#16a34a; --cool:#64748b;
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#0d1016; --card:#151a22; --ink:#e7ecf3; --muted:#93a0b0;
+          --line:#242c37; --accent:#60a5fa; --accent-soft:rgba(96,165,250,.14); }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+     font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+nav{background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+nav .inner{max-width:1600px;margin:0 auto;padding:0 20px;display:flex;align-items:center;gap:4px;height:56px}
+nav .brand{font-weight:700;font-size:16px;letter-spacing:-.02em;margin-right:20px;color:var(--ink)}
+nav a.tab{padding:8px 14px;border-radius:7px;color:var(--muted);font-size:14px;font-weight:500}
+nav a.tab:hover{background:var(--accent-soft);text-decoration:none}
+nav a.tab.on{background:var(--accent-soft);color:var(--accent)}
+nav .spacer{flex:1}
+main{max-width:1600px;margin:0 auto;padding:22px 20px 60px}
+h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em}
+h2{font-size:16px;margin:26px 0 12px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13.5px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:18px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.card .n{font-size:26px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.card .l{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px}
+.panel h3{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tablewrap{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{text-align:left;padding:10px 12px;background:var(--bg);border-bottom:1px solid var(--line);
+   font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--accent-soft)}
+.score{display:inline-block;min-width:36px;text-align:center;padding:3px 7px;border-radius:6px;
+       font-weight:650;color:#fff;font-size:12.5px;font-variant-numeric:tabular-nums}
+.s-hot{background:var(--hot)}.s-warm{background:var(--warm)}.s-ok{background:var(--good)}.s-cool{background:var(--cool)}
+.tag{display:inline-block;padding:2px 7px;border-radius:5px;font-size:11px;border:1px solid var(--line);
+     color:var(--muted);white-space:nowrap}
+.tag-none{background:rgba(220,38,38,.12);border-color:rgba(220,38,38,.3);color:var(--hot)}
+.tag-bad{background:rgba(234,88,12,.12);border-color:rgba(234,88,12,.3);color:var(--warm)}
+.tag-good{background:rgba(22,163,74,.12);border-color:rgba(22,163,74,.3);color:var(--good)}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:5px}
+.bar > i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:13.5px;gap:12px}
+.row .k{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .v{font-variant-numeric:tabular-nums;font-weight:550}
+form.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
+input,select,textarea,button{font:inherit;font-size:13.5px;padding:7px 10px;border:1px solid var(--line);
+       border-radius:7px;background:var(--card);color:var(--ink)}
+button{cursor:pointer;background:var(--accent);color:#fff;border-color:transparent;font-weight:550}
+button:hover{filter:brightness(1.08)}
+button.ghost{background:var(--card);color:var(--ink);border-color:var(--line)}
+.muted{color:var(--muted)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+.pager{display:flex;gap:8px;align-items:center;justify-content:center;margin:18px 0}
+.empty{padding:44px 20px;text-align:center;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.spark{display:flex;align-items:flex-end;gap:2px;height:44px;margin-top:8px}
+.spark > i{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px;opacity:.75}
+</style>
+</head>
+<body>
+<nav>
+  <div class="inner">
+    <span class="brand">📍 leadgen</span>
+    <a class="tab {% if page == 'dashboard' %}on{% endif %}" href="/">Dashboard</a>
+    <a class="tab {% if page == 'leads' %}on{% endif %}" href="/leads">Leads</a>
+    <a class="tab {% if page == 'runs' %}on{% endif %}" href="/runs">Runs</a>
+    <span class="spacer"></span>
+    <a class="tab" href="/docs">API</a>
+  </div>
+</nav>
+<main>
+{% block content %}{% endblock %}
+</main>
+{% block scripts %}{% endblock %}
+</body>
+</html>

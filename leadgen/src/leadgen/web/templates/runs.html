@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Runs — leadgen{% endblock %}
+
+{% block content %}
+<h1>Pipeline runs</h1>
+<div class="sub">Trigger a run manually or review what the scheduler has done.</div>
+
+<div class="panel" style="margin:18px 0">
+  <h3>Trigger a run</h3>
+  <form onsubmit="return triggerRun(event)" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+    <select name="location">
+      {% for key, target in locations.items() %}
+        <option value="{{ key }}">{{ target.label }}</option>
+      {% endfor %}
+    </select>
+    <select name="niche">
+      <option value="">All niches</option>
+      {% for n in niches %}<option value="{{ n.key }}">{{ n.label }}</option>{% endfor %}
+    </select>
+    <input name="target_leads" type="number" value="50" min="1" max="5000" style="width:120px" title="Target leads">
+    <label class="muted" style="display:flex;align-items:center;gap:6px">
+      <input type="checkbox" name="use_ai" checked style="width:auto"> AI enrichment
+    </label>
+    <label class="muted" style="display:flex;align-items:center;gap:6px">
+      <input type="checkbox" name="dry_run" style="width:auto"> Dry run
+    </label>
+    <input name="api_key" type="password" placeholder="X-API-Key" style="width:180px">
+    <button type="submit">Start run</button>
+    <span id="run-msg" class="muted" style="font-size:12.5px"></span>
+  </form>
+</div>
+
+<h2>Run history</h2>
+<div class="tablewrap">
+  <table>
+    <thead>
+      <tr><th>Date</th><th>Status</th><th>Trigger</th><th>Location</th><th>Found</th><th>New</th>
+          <th>Dupes</th><th>Audited</th><th>Qualified</th><th>AI</th><th>Duration</th><th>Errors</th></tr>
+    </thead>
+    <tbody>
+    {% for run in runs %}
+      <tr>
+        <td>{{ run.run_date }}<div class="muted" style="font-size:11px">{{ run.started_at.strftime('%H:%M') }}</div></td>
+        <td><span class="tag {% if run.status.value == 'completed' %}tag-good{% elif run.status.value in ['failed'] %}tag-none{% elif run.status.value == 'partial' %}tag-bad{% endif %}">{{ run.status.value }}</span></td>
+        <td class="muted">{{ run.trigger }}</td>
+        <td>{{ run.location_key or '—' }}</td>
+        <td>{{ run.discovered }}</td>
+        <td><strong>{{ run.new_businesses }}</strong></td>
+        <td class="muted">{{ run.duplicates }}</td>
+        <td>{{ run.audited }}</td>
+        <td><strong>{{ run.qualified }}</strong></td>
+        <td>{{ run.enriched }}</td>
+        <td class="muted">{{ (run.duration_seconds / 60) | round(1) ~ 'm' if run.duration_seconds else '—' }}</td>
+        <td>{% if run.errors %}<span class="tag tag-none" title="{{ run.errors | join(' | ') | truncate(300) }}">{{ run.errors | length }}</span>{% else %}<span class="muted">0</span>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="12" class="empty">No runs recorded yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Reports</h2>
+<div class="tablewrap">
+  <table>
+    <thead><tr><th>Date</th><th>Leads</th><th>Avg score</th><th>Summary</th><th>Download</th></tr></thead>
+    <tbody>
+    {% for r in reports %}
+      <tr>
+        <td>{{ r.report_date }}</td>
+        <td>{{ r.lead_count }}</td>
+        <td>{{ r.avg_score or '—' }}</td>
+        <td class="muted" style="max-width:520px;font-size:12.5px">{{ r.summary or '' }}</td>
+        <td>
+          <a href="/api/exports/report/{{ r.report_date }}?fmt=html">HTML</a> ·
+          <a href="/api/exports/report/{{ r.report_date }}?fmt=csv">CSV</a> ·
+          <a href="/api/exports/report/{{ r.report_date }}?fmt=xlsx">Excel</a>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="empty">No reports generated yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function triggerRun(event) {
+  event.preventDefault();
+  const data = new FormData(event.target);
+  const msg = document.getElementById('run-msg');
+
+  const body = {
+    location: data.get('location'),
+    niches: data.get('niche') ? [data.get('niche')] : [],
+    target_leads: parseInt(data.get('target_leads') || '50', 10),
+    use_ai: data.get('use_ai') === 'on',
+    dry_run: data.get('dry_run') === 'on'
+  };
+  const headers = { 'Content-Type': 'application/json' };
+  if (data.get('api_key')) headers['X-API-Key'] = data.get('api_key');
+
+  msg.textContent = 'Starting…';
+  try {
+    const response = await fetch('/api/runs/trigger', {
+      method: 'POST', headers, body: JSON.stringify(body)
+    });
+    const result = await response.json().catch(() => ({}));
+    msg.textContent = response.ok
+      ? 'Run started. Refresh in a few minutes to see progress.'
+      : 'Failed: ' + (result.detail || response.status);
+  } catch (e) {
+    msg.textContent = 'Failed: ' + e.message;
+  }
+  return false;
+}
+</script>
+{% endblock %}
