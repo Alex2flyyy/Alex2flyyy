@@ -25,8 +25,7 @@ history. No server to maintain.
 
    | Secret | Required |
    |---|---|
-   | `LEADGEN_DATABASE_URL` | yes (`postgresql+asyncpg://...`) |
-   | `LEADGEN_ALEMBIC_DATABASE_URL` | yes (`postgresql+psycopg://...`) |
+   | `LEADGEN_DATABASE_URL` | yes — paste your provider's connection string verbatim |
    | `LEADGEN_GOOGLE_MAPS_API_KEY` | recommended |
    | `ANTHROPIC_API_KEY` | optional |
    | `LEADGEN_API_KEY` | if you also run the API |

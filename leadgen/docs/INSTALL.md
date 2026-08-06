@@ -144,8 +144,14 @@ it.
 | `LEADGEN_DB_POOL_SIZE` | `10` |
 | `LEADGEN_DB_MAX_OVERFLOW` | `20` |
 
-Alembic derives a sync URL automatically; override with `ALEMBIC_DATABASE_URL`
-if your migration user differs.
+Paste your provider's connection string exactly as given — Neon, Supabase,
+Heroku, and RDS formats all work unmodified. The app adds the right SQLAlchemy
+driver and translates TLS parameters for both the async runtime and the sync
+migration runner, because `asyncpg` and `psycopg` spell them differently and
+`asyncpg` rejects libpq-only options such as `channel_binding` outright.
+
+Override the migration URL with `ALEMBIC_DATABASE_URL` only if your migration
+user differs from the application user.
 
 ### Discovery
 

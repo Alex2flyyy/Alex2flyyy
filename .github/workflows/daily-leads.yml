@@ -59,7 +59,6 @@ jobs:
       LEADGEN_SLACK_WEBHOOK_URL: ${{ secrets.LEADGEN_SLACK_WEBHOOK_URL }}
       LEADGEN_EXPORT_DIR: ./data/exports
       LEADGEN_SCREENSHOT_DIR: ./data/screenshots
-      ALEMBIC_DATABASE_URL: ${{ secrets.LEADGEN_ALEMBIC_DATABASE_URL }}
 
     steps:
       - uses: actions/checkout@v4
@@ -70,27 +69,52 @@ jobs:
           cache: pip
           cache-dependency-path: leadgen/pyproject.toml
 
-      - name: Fail fast on missing configuration
+      # A scheduled run with no database configured is "not set up yet", not a
+      # failure. Failing here would paint the repository red every morning
+      # until setup is finished, which trains you to ignore the one signal that
+      # should mean something. A manual run still fails loudly, because you
+      # asked for it and deserve to know why it did nothing.
+      - name: Check configuration
+        id: check
         run: |
-          if [ -z "$LEADGEN_DATABASE_URL" ]; then
-            echo "::error::LEADGEN_DATABASE_URL secret is not set."
-            exit 1
+          if [ -n "$LEADGEN_DATABASE_URL" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Not configured yet"
+              echo ""
+              echo "\`LEADGEN_DATABASE_URL\` is not set, so this run did nothing."
+              echo "Add it under **Settings → Secrets and variables → Actions**"
+              echo "and the next scheduled run will pick it up automatically."
+              echo ""
+              echo "See \`leadgen/docs/DEPLOYMENT.md\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              echo "::error::LEADGEN_DATABASE_URL secret is not set."
+              exit 1
+            fi
+            echo "::notice::Skipping scheduled run — no database configured yet."
           fi
-          if [ -z "$LEADGEN_GOOGLE_MAPS_API_KEY" ]; then
+          if [ -n "$LEADGEN_DATABASE_URL" ] && [ -z "$LEADGEN_GOOGLE_MAPS_API_KEY" ]; then
             echo "::warning::No Google Maps key — discovery falls back to OpenStreetMap only."
           fi
 
       - name: Install
+        if: steps.check.outputs.configured == 'true'
         run: pip install -e .
 
       - name: Install browser
+        if: steps.check.outputs.configured == 'true'
         run: python -m playwright install --with-deps chromium
 
       - name: Apply migrations
+        if: steps.check.outputs.configured == 'true'
         run: alembic upgrade head
 
       - name: Run the pipeline
         id: run
+        if: steps.check.outputs.configured == 'true'
         run: |
           NICHE_ARGS=""
           for n in ${{ github.event.inputs.niches }}; do NICHE_ARGS="$NICHE_ARGS --niche $n"; done
@@ -100,12 +124,12 @@ jobs:
             $NICHE_ARGS
 
       - name: Push to Airtable
-        if: env.LEADGEN_AIRTABLE_API_KEY != ''
+        if: steps.check.outputs.configured == 'true' && env.LEADGEN_AIRTABLE_API_KEY != ''
         continue-on-error: true
         run: leadgen export airtable --limit 50
 
       - name: Summarize
-        if: always()
+        if: always() && steps.check.outputs.configured == 'true'
         run: |
           {
             echo "## Daily lead run"
@@ -114,7 +138,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload report
-        if: always()
+        if: always() && steps.check.outputs.configured == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: leads-${{ github.run_number }}

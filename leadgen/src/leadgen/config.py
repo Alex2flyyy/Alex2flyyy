@@ -19,6 +19,7 @@ import os
 import re
 from pathlib import Path
 from typing import Any, Literal
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import yaml
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -28,6 +29,84 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 PACKAGE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = PACKAGE_DIR.parent.parent
 DEFAULT_CONFIG_DIR = PROJECT_ROOT / "config"
+
+
+# =============================================================================
+# Database URL normalization
+# =============================================================================
+
+# Hosted Postgres providers hand you one URL and expect it to just work. It
+# does not: SQLAlchemy needs an explicit driver, asyncpg and psycopg disagree
+# about how TLS is spelled, and asyncpg rejects libpq-only parameters outright.
+# Rather than make the operator hand-edit the string into two variants — which
+# is easy to get subtly wrong and fails at 6am — we accept whatever the
+# provider gave us and derive both forms here.
+
+# asyncpg understands `ssl`; these are libpq's spelling and are passed through
+# the URL by nearly every hosted provider.
+_LIBPQ_ONLY_PARAMS = {
+    "channel_binding",
+    "options",
+    "target_session_attrs",
+    "connect_timeout",
+    "application_name",
+    "sslcert",
+    "sslkey",
+    "sslrootcert",
+    "gssencmode",
+}
+
+
+def normalize_database_url(url: str, *, is_async: bool = True) -> str:
+    """Return ``url`` with the right SQLAlchemy driver and TLS parameters.
+
+    Accepts anything a hosted provider hands out — ``postgres://``,
+    ``postgresql://``, or an already-qualified ``postgresql+asyncpg://`` — and
+    returns a URL the requested driver will actually accept.
+
+    The awkward part is TLS. libpq (and therefore psycopg) spells it
+    ``sslmode=require``; asyncpg spells it ``ssl=require`` and raises
+    ``TypeError`` on the libpq name. asyncpg also rejects ``channel_binding``,
+    which Neon includes by default, so libpq-only parameters are dropped for
+    the async driver rather than passed through to a crash.
+    """
+    if not url:
+        return url
+
+    parsed = urlsplit(url)
+    driver = "asyncpg" if is_async else "psycopg"
+
+    scheme = parsed.scheme or "postgresql"
+    base = scheme.split("+", 1)[0]
+    if base == "postgres":  # some providers still emit the legacy scheme
+        base = "postgresql"
+    if base != "postgresql":
+        return url  # SQLite or something else; leave it alone
+
+    params = parse_qsl(parsed.query, keep_blank_values=True)
+    out: list[tuple[str, str]] = []
+    ssl_value: str | None = None
+
+    for key, value in params:
+        lowered = key.lower()
+        if lowered in ("sslmode", "ssl"):
+            ssl_value = value
+            continue
+        if is_async and lowered in _LIBPQ_ONLY_PARAMS:
+            continue
+        out.append((key, value))
+
+    if ssl_value:
+        if is_async:
+            # asyncpg accepts disable/allow/prefer/require/verify-ca/verify-full,
+            # so the libpq value carries over unchanged under the other name.
+            out.append(("ssl", ssl_value))
+        else:
+            out.append(("sslmode", ssl_value))
+
+    return urlunsplit(
+        (f"postgresql+{driver}", parsed.netloc, parsed.path, urlencode(out), parsed.fragment)
+    )
 
 
 # =============================================================================
@@ -134,13 +213,17 @@ class Settings(BaseSettings):
     @property
     def sync_database_url(self) -> str:
         """Alembic and other sync consumers need a non-async driver."""
-        return self.database_url.replace("+asyncpg", "+psycopg").replace(
-            "postgresql://", "postgresql+psycopg://"
-        )
+        return normalize_database_url(self.database_url, is_async=False)
 
     @property
     def pagespeed_key(self) -> str | None:
         return self.pagespeed_api_key or self.google_maps_api_key
+
+    @field_validator("database_url")
+    @classmethod
+    def _normalize_db_url(cls, v: str) -> str:
+        """Accept a provider's connection string verbatim."""
+        return normalize_database_url(v, is_async=True)
 
     @field_validator("log_level")
     @classmethod
