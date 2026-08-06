@@ -1,0 +1,151 @@
+# =============================================================================
+# PawParty — machine settings
+# =============================================================================
+# What the pipeline DOES. The channel files (config/channels/*.yaml) define what
+# it MAKES. Environment variables in .env override secrets and a few knobs.
+# -----------------------------------------------------------------------------
+
+# Where all output lives. Relative paths resolve against the project root.
+workspace: Videos
+
+# Which channel to use when --channel isn't passed.
+default_channel: kittens_puppies
+
+# Videos rendered in parallel. Each one runs several ffmpeg passes, so match
+# this to your CPU cores (and to your provider's rate limit). 2 is a safe start;
+# 4-6 is reasonable on an 8-core machine with a paid provider.
+concurrency: 2
+
+# Keep per-beat working files after a video finishes. Costs disk, saves you the
+# next time a job needs a partial re-render. Set false on a small VPS.
+keep_intermediates: true
+
+# -----------------------------------------------------------------------------
+# Render — the finished file's specification
+# -----------------------------------------------------------------------------
+render:
+  width: 1080          # 9:16 vertical. Do not change unless you know why.
+  height: 1920
+  fps: 30
+  video_codec: libx264
+  crf: 20              # 18 = larger/sharper, 23 = smaller/softer
+  preset: medium       # veryfast for speed, slow for a smaller file
+  pixel_format: yuv420p
+  audio_codec: aac
+  audio_bitrate: 160k
+  audio_sample_rate: 48000
+  loudness_lufs: -14.0 # platform loudness target; louder gets turned down anyway
+  safe_top: 0.12       # fraction of height reserved for platform UI
+  safe_bottom: 0.20
+
+# -----------------------------------------------------------------------------
+# Providers — swap these to go from free previews to real AI footage
+# -----------------------------------------------------------------------------
+# video : synth | replicate | fal
+# image : synth | replicate
+# music : synth | local_library
+# llm   : offline | anthropic
+#
+# `synth` needs no credentials and produces real MP4s built with ffmpeg. It is
+# the default so a fresh clone runs end to end. It does NOT produce animals —
+# see docs/PROVIDERS.md to pick a real model.
+# -----------------------------------------------------------------------------
+providers:
+  video: synth
+  image: synth
+  music: synth
+  llm: offline
+
+  options:
+    replicate:
+      # Pick a current text-to-video or image-to-video model and put its slug
+      # here, e.g. "minimax/video-01" or "owner/model:versionhash".
+      model: ""
+      cost_per_second_usd: 0.05
+      timeout_s: 900
+      # Map our fields onto the model's input names (check the model's schema).
+      input_map:
+        prompt: prompt
+        negative_prompt: negative_prompt
+        duration: duration
+        seed: seed
+        first_frame: image      # remove this line for text-to-video models
+      static_input:
+        aspect_ratio: "9:16"
+
+    replicate_image:
+      model: ""
+      cost_per_image_usd: 0.01
+      static_input:
+        aspect_ratio: "9:16"
+        output_format: png
+
+    fal:
+      model: ""
+      cost_per_second_usd: 0.06
+      timeout_s: 900
+      input_map:
+        prompt: prompt
+        duration: duration
+        seed: seed
+        first_frame: image_url
+      static_input:
+        aspect_ratio: "9:16"
+
+    anthropic:
+      model: claude-sonnet-5
+      max_tokens: 900
+      temperature: 1.0
+
+# -----------------------------------------------------------------------------
+# Budget — enforced BEFORE each provider call
+# -----------------------------------------------------------------------------
+budget:
+  daily_usd: 6.00
+  per_video_usd: 1.25
+  abort_on_exceed: true
+
+# -----------------------------------------------------------------------------
+# QC — the gate before a file reaches Finished/
+# -----------------------------------------------------------------------------
+qc:
+  min_duration_s: 8.0
+  max_duration_s: 60.0
+  duration_tolerance_s: 2.5   # transitions legitimately shorten the timeline
+  require_audio: true
+  min_file_size_kb: 200
+  max_file_size_mb: 280
+  expect_width: 1080
+  expect_height: 1920
+
+# -----------------------------------------------------------------------------
+# Schedule — local wall-clock post times
+# -----------------------------------------------------------------------------
+# Seven slots for seven videos a day, spread to avoid self-competition. These
+# are a starting point; replace them with your own analytics after ~2 weeks.
+schedule:
+  videos_per_day: 7
+  timezone: America/Los_Angeles
+  post_times:
+    - "07:15"
+    - "09:30"
+    - "12:00"
+    - "15:30"
+    - "18:00"
+    - "20:15"
+    - "22:00"
+  jitter_minutes: 12
+
+# -----------------------------------------------------------------------------
+# Subtitles — burned-in on-screen text
+# -----------------------------------------------------------------------------
+subtitles:
+  enabled: true
+  min_duration_s: 12.0   # shorter clips read better clean
+  font: DejaVu Sans      # must exist on the render host; see docs/RUNBOOK.md
+  font_size: 78
+  primary_color: "&H00FFFFFF"   # ASS colours are &HAABBGGRR
+  outline_color: "&H00000000"
+  outline: 5
+  shadow: 2
+  margin_v: 420

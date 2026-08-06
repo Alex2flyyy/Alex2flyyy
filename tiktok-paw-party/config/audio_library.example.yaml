@@ -1,0 +1,71 @@
+# =============================================================================
+# Example music library manifest
+# =============================================================================
+# Copy this to Videos/Audio/library/library.yaml and describe your own licensed
+# tracks, then set `providers.music: local_library` in config/settings.yaml.
+#
+# Tracks are scored against each concept's music vibe tags and BPM, so the tags
+# here are what make selection sensible. Files present in the folder but absent
+# from this manifest still work — they just can't be matched on vibe.
+#
+# The `license` field is not read by the code. It exists so that in eighteen
+# months you can answer "where did this track come from?" without guessing.
+# See docs/LEGAL.md.
+# =============================================================================
+
+tracks:
+  - file: disco_paws.mp3
+    label: "Disco Paws"
+    bpm: 118
+    energy: high
+    tags: [disco, funk, retro, party, high]
+    license: "Epidemic Sound — subscription #12345, downloaded 2026-08-01"
+
+  - file: block_party_bounce.mp3
+    label: "Block Party Bounce"
+    bpm: 92
+    energy: medium
+    tags: [hiphop, urban, street, medium]
+    license: "Artlist — invoice 9981"
+
+  - file: beach_bounce.wav
+    label: "Beach Bounce"
+    bpm: 104
+    energy: medium
+    tags: [tropical, summer, beach, vacation, medium]
+    license: "Artlist — invoice 9981"
+
+  - file: neon_drive.mp3
+    label: "Neon Drive"
+    bpm: 110
+    energy: medium
+    tags: [synthwave, neon, cyberpunk, night, medium]
+    license: "Soundstripe — plan #778"
+
+  - file: big_room_paws.mp3
+    label: "Big Room Paws"
+    bpm: 128
+    energy: high
+    tags: [edm, party, concert, high]
+    license: "Soundstripe — plan #778"
+
+  - file: cozy_rain.mp3
+    label: "Cozy Rain"
+    bpm: 84
+    energy: low
+    tags: [lofi, cozy, rainy, calm, low]
+    license: "Epidemic Sound — subscription #12345"
+
+  - file: hoedown_stomp.wav
+    label: "Hoedown Stomp"
+    bpm: 116
+    energy: medium
+    tags: [country, farm, rustic, medium]
+    license: "CC0 — freepd.com, verified 2026-08-01"
+
+  - file: jingle_paws.mp3
+    label: "Jingle Paws"
+    bpm: 120
+    energy: medium
+    tags: [festive, christmas, winter, holiday, medium]
+    license: "Epidemic Sound — subscription #12345"

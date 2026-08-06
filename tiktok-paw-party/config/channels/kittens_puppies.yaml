@@ -1,0 +1,1292 @@
+# =============================================================================
+# Channel: kittens_puppies
+# =============================================================================
+# The creative vocabulary for the flagship account. Every option is a building
+# block the concept generator combines; the tag algebra keeps combinations
+# coherent (no Santa hats at the beach) while still being effectively endless.
+#
+# HOW TAGS WORK
+#   tags      : what this option contributes to the growing context
+#   requires  : only offered when ALL of these tags are already in context
+#   excludes  : never offered when ANY of these tags is in context
+#   weight    : relative likelihood (1.0 = normal, 0.4 = rarer, 2.0 = favoured)
+#
+# Sampling order is: occasions -> themes -> settings -> palettes -> lighting
+#   -> animals -> accessories -> dance_styles -> camera_moves -> transitions
+#   -> effects -> music_vibes
+# So an option can only `require` a tag contributed by an earlier pool.
+#
+# ADDING CONTENT: append entries. No code changes, no restart. The novelty
+# ledger will start favouring your new options immediately because unused
+# options carry no recency penalty.
+# =============================================================================
+
+display_name: "Paw Party"
+description: >-
+  Adorable AI-generated kittens and puppies dancing through endlessly varied
+  party themes. Bright, wholesome, funny, family-friendly, loop-friendly.
+
+# -----------------------------------------------------------------------------
+# Structure — how videos are shaped
+# -----------------------------------------------------------------------------
+structure:
+  # Chance that a video leans into the current month's holiday/season.
+  # Above ~0.35 the feed starts to feel like a single-holiday account.
+  seasonal_bias: 0.22
+
+  # Solo / duo / trio. Duos win on comments ("which one?"), so they dominate.
+  cast_size_weights:
+    "1": 0.28
+    "2": 0.50
+    "3": 0.22
+
+  loop_strategies:
+    - crossfade_to_start
+    - crossfade_to_start
+    - freeze_hold
+    - hard_cut
+
+  # Length archetypes. Mixing them keeps the account's retention profile broad.
+  duration_bands:
+    - id: snap
+      label: "Snap loop"
+      min_s: 9
+      max_s: 13
+      beat_count: [2, 3]
+      weight: 0.28
+      notes: "Maximum loop rate. One idea, one punchline, repeat."
+    - id: short
+      label: "Short set"
+      min_s: 14
+      max_s: 21
+      beat_count: [3, 4]
+      weight: 0.32
+      notes: "Hook + two escalations + payoff. The workhorse."
+    - id: standard
+      label: "Standard"
+      min_s: 22
+      max_s: 32
+      beat_count: [4, 6]
+      weight: 0.26
+      notes: "Room for a real switch beat and a costume change."
+    - id: extended
+      label: "Extended"
+      min_s: 33
+      max_s: 45
+      beat_count: [6, 8]
+      weight: 0.14
+      notes: "Mini-narrative. Only worth it when the concept has stages."
+
+# -----------------------------------------------------------------------------
+# Prompt style — the look, applied to every generation prompt
+# -----------------------------------------------------------------------------
+prompt_style:
+  render_style: >-
+    hyper-cute 3D animated short film look, Pixar-quality fur shading with
+    visible individual hairs, soft subsurface scattering, glossy expressive eyes,
+    squash-and-stretch animation
+  quality_anchor: >-
+    crisp 4K detail, cinematic depth of field, professional colour grade,
+    60fps-smooth motion
+  base_negatives: "ugly, deformed, disfigured, low quality, photorealistic gore"
+
+# -----------------------------------------------------------------------------
+# Safety — this is a family-friendly account; the floor is not negotiable
+# -----------------------------------------------------------------------------
+safety:
+  negative_prompt_extra: >-
+    sad animal, crying, scared, abandoned, thin, sick, wound, vet, cage,
+    aggressive, snarling, teeth bared, fighting, human hands grabbing
+  banned_words:
+    - kill
+    - dead
+    - die
+    - hate
+    - stupid
+    - ugly
+    - fight
+    - drunk
+    - sexy
+    - hot girl
+
+# -----------------------------------------------------------------------------
+# VOCABULARY
+# -----------------------------------------------------------------------------
+vocabulary:
+
+  # --- occasions: seasonal hooks -------------------------------------------
+  occasions:
+    - id: christmas
+      label: "Christmas"
+      tags: [christmas, holiday, winter, cold, festive]
+    - id: halloween
+      label: "Halloween"
+      tags: [halloween, holiday, spooky_cute, autumn, night]
+    - id: valentines
+      label: "Valentine's Day"
+      tags: [valentines, holiday, romantic_cute, pink]
+    - id: new_year
+      label: "New Year's Eve"
+      tags: [new_year, holiday, night, sparkle, festive]
+    - id: summer
+      label: "Summer"
+      tags: [summer, warm, outdoors, bright]
+    - id: spring
+      label: "Spring"
+      tags: [spring, flowers, outdoors, pastel]
+    - id: autumn
+      label: "Autumn"
+      tags: [autumn, cozy, warm_tones, outdoors]
+    - id: birthday
+      label: "Birthday"
+      tags: [birthday, party, festive, confetti]
+    - id: easter
+      label: "Easter"
+      tags: [easter, spring, pastel, flowers]
+    - id: st_patricks
+      label: "St. Patrick's Day"
+      tags: [st_patricks, holiday, green, festive]
+
+  # --- themes: the concept's big idea --------------------------------------
+  themes:
+    - id: disco_night
+      label: "Disco night"
+      tags: [disco, retro, night, sparkle, indoor, party]
+      weight: 1.4
+    - id: hiphop_block_party
+      label: "Hip-hop block party"
+      tags: [hiphop, urban, street, daylight, party]
+      weight: 1.3
+    - id: beach_party
+      label: "Beach party"
+      tags: [beach, summer, tropical, outdoors, daylight, party]
+      weight: 1.2
+      excludes: [christmas, winter]
+    - id: birthday_bash
+      label: "Birthday bash"
+      tags: [birthday, party, confetti, indoor, festive]
+      weight: 1.2
+    - id: space_dance
+      label: "Space dance"
+      tags: [space, sci_fi, night, cosmic, fantasy]
+      weight: 1.0
+    - id: cowboy_rodeo
+      label: "Cowboy rodeo"
+      tags: [cowboy, western, outdoors, daylight, dusty]
+      weight: 1.0
+      excludes: [underwater]
+    - id: ninja_dojo
+      label: "Ninja dojo"
+      tags: [ninja, martial_arts, indoor, dramatic]
+      weight: 0.9
+    - id: superhero_city
+      label: "Superhero city"
+      tags: [superhero, action, urban, heroic]
+      weight: 1.0
+    - id: neon_cyberpunk
+      label: "Neon cyberpunk"
+      tags: [cyberpunk, neon, night, futuristic, urban, rain_ok]
+      weight: 1.1
+    - id: tropical_vacation
+      label: "Tropical vacation"
+      tags: [tropical, summer, outdoors, daylight, vacation]
+      weight: 1.0
+      excludes: [christmas, winter]
+    - id: rainy_day_indoors
+      label: "Rainy day indoors"
+      tags: [rainy, cozy, indoor, soft, calm]
+      weight: 0.8
+    - id: snow_day
+      label: "Snow day"
+      tags: [snow, winter, cold, outdoors, bright]
+      weight: 0.9
+      excludes: [summer, tropical, beach]
+    - id: concert_stage
+      label: "Concert stage"
+      tags: [concert, stage, night, crowd, spotlight, party]
+      weight: 1.2
+    - id: candy_wonderland
+      label: "Candy wonderland"
+      tags: [candy, pastel, fantasy, sweet, bright]
+      weight: 1.0
+    - id: jungle_safari
+      label: "Jungle safari"
+      tags: [jungle, nature, outdoors, adventure, daylight]
+      weight: 0.9
+    - id: pirate_ship
+      label: "Pirate ship"
+      tags: [pirate, adventure, ocean, outdoors]
+      weight: 0.8
+    - id: farmyard_hoedown
+      label: "Farmyard hoedown"
+      tags: [farm, country, outdoors, daylight, rustic]
+      weight: 0.9
+    - id: ballroom_gala
+      label: "Ballroom gala"
+      tags: [ballroom, elegant, indoor, chandelier, formal]
+      weight: 0.8
+    - id: arcade_night
+      label: "Arcade night"
+      tags: [arcade, retro_game, neon, indoor, night]
+      weight: 1.0
+    - id: underwater_reef
+      label: "Underwater reef"
+      tags: [underwater, ocean, fantasy, bubbles]
+      weight: 0.7
+      excludes: [snow, winter]
+    - id: haunted_mansion
+      label: "Spooky-cute haunted mansion"
+      tags: [spooky_cute, halloween, night, indoor, fantasy]
+      weight: 0.8
+    - id: winter_wonderland
+      label: "Winter wonderland"
+      tags: [winter, snow, cold, sparkle, festive]
+      weight: 0.9
+      excludes: [summer, tropical, beach]
+    - id: rooftop_sunset
+      label: "Rooftop sunset party"
+      tags: [rooftop, urban, sunset, golden, party]
+      weight: 1.0
+    - id: cloud_castle
+      label: "Cloud castle"
+      tags: [fantasy, dreamy, pastel, sky, soft]
+      weight: 0.8
+    - id: rock_garage
+      label: "Garage rock band"
+      # Deliberately not tagged `concert` — that tag unlocks the festival
+      # main-stage setting, and "garage band on a festival stage" is a mismatch
+      # a viewer notices immediately.
+      tags: [rock, garage, indoor, gritty_cute]
+      weight: 0.9
+
+  # --- settings: the physical location -------------------------------------
+  settings:
+    - id: mirrorball_dancefloor
+      label: "mirrorball dancefloor with a glowing checkerboard grid"
+      tags: [indoor, sparkle, night]
+      requires: [disco]
+      weight: 2.0
+    - id: neon_street_corner
+      label: "neon-soaked street corner with steam and puddle reflections"
+      tags: [urban, night, reflective]
+      requires: [neon]
+      weight: 2.0
+    - id: sunny_boardwalk
+      label: "sunny boardwalk beside turquoise water"
+      tags: [outdoors, daylight, bright]
+      requires: [beach]
+      weight: 2.0
+    - id: palm_lagoon
+      label: "palm-fringed lagoon with white sand"
+      tags: [outdoors, daylight, bright]
+      requires: [tropical]
+      weight: 2.0
+    - id: party_room
+      label: "party room draped in balloons and streamers"
+      tags: [indoor, festive]
+      requires: [birthday]
+      weight: 2.0
+    - id: starfield_platform
+      label: "floating glass platform in a starfield with a ringed planet behind"
+      tags: [cosmic, night, dramatic]
+      requires: [space]
+      weight: 2.0
+    - id: desert_saloon
+      label: "dusty desert saloon porch at golden hour"
+      tags: [outdoors, warm_tones]
+      requires: [cowboy]
+      weight: 2.0
+    - id: bamboo_dojo
+      label: "bamboo dojo with paper lanterns and falling leaves"
+      tags: [indoor, dramatic]
+      requires: [ninja]
+      weight: 2.0
+    - id: skyline_rooftop
+      label: "city rooftop above a glowing skyline"
+      tags: [urban, high, dramatic]
+      requires: [superhero]
+      weight: 1.6
+    - id: rooftop_string_lights
+      label: "rooftop terrace strung with warm bulb lights"
+      tags: [outdoors, warm_tones, evening]
+      requires: [rooftop]
+      weight: 2.0
+    - id: cozy_living_room
+      label: "cozy living room with rain on the window and a soft rug"
+      tags: [indoor, soft, warm_tones]
+      requires: [rainy]
+      weight: 2.0
+    - id: snowy_backyard
+      label: "snowy backyard with fresh powder and a wonky snowman"
+      tags: [outdoors, cold, bright]
+      requires: [snow]
+      weight: 2.0
+    - id: festival_mainstage
+      label: "festival main stage with lasers and a cheering crowd of plush toys"
+      tags: [night, crowd, dramatic]
+      requires: [concert]
+      weight: 2.0
+    - id: candy_meadow
+      label: "meadow of lollipop trees and marshmallow boulders"
+      tags: [outdoors, pastel, bright]
+      requires: [candy]
+      weight: 2.0
+    - id: jungle_clearing
+      label: "sunlit jungle clearing with giant leaves and vines"
+      tags: [outdoors, daylight, green]
+      requires: [jungle]
+      weight: 2.0
+    - id: ship_deck
+      label: "wooden ship deck with billowing sails and rolling waves"
+      tags: [outdoors, daylight]
+      requires: [pirate]
+      weight: 2.0
+    - id: red_barn
+      label: "red barn with hay bales and string lights"
+      tags: [outdoors, warm_tones, rustic]
+      requires: [farm]
+      weight: 2.0
+    - id: marble_ballroom
+      label: "marble ballroom under an enormous crystal chandelier"
+      tags: [indoor, elegant]
+      requires: [ballroom]
+      weight: 2.0
+    - id: arcade_floor
+      label: "arcade floor glowing with cabinet screens and neon carpet"
+      tags: [indoor, night, neon]
+      requires: [arcade]
+      weight: 2.0
+    - id: coral_reef
+      label: "sunlit coral reef with drifting bubbles and friendly fish"
+      tags: [underwater_scene, bright]
+      requires: [underwater]
+      weight: 2.0
+    - id: haunted_ballroom
+      label: "cobwebbed mansion ballroom lit by floating pumpkin lanterns"
+      tags: [indoor, night, spooky]
+      requires: [spooky_cute]
+      weight: 2.0
+    - id: frosted_pine_grove
+      label: "frosted pine grove with drifting snowflakes and fairy lights"
+      tags: [outdoors, cold, sparkle]
+      requires: [winter]
+      weight: 1.8
+    - id: cloud_terrace
+      label: "terrace of soft clouds above a pastel sunrise"
+      tags: [sky, soft, pastel]
+      requires: [fantasy]
+      weight: 1.2
+    - id: garage_stage
+      label: "cluttered garage with amps, fairy lights and a rug stage"
+      tags: [indoor, gritty_cute]
+      requires: [garage]
+      weight: 2.0
+    - id: block_party_street
+      label: "closed-off street with a graffiti mural and a big speaker stack"
+      tags: [urban, daylight]
+      requires: [street]
+      weight: 2.0
+    # Generic fallbacks — always compatible, so no theme can strand the sampler.
+    - id: studio_sweep
+      label: "clean studio backdrop in a bold single colour"
+      tags: [indoor, minimal]
+      weight: 0.12
+    - id: confetti_void
+      label: "seamless colour backdrop filled with slow-falling confetti"
+      tags: [minimal, festive]
+      weight: 0.12
+    - id: sunny_park
+      label: "sunny park lawn with dappled tree shade"
+      tags: [outdoors, daylight, green]
+      weight: 0.14
+
+  # --- palettes -------------------------------------------------------------
+  palettes:
+    - id: candy_pop
+      label: "candy pop palette — bubblegum pink, mint, lemon yellow"
+      tags: [bright, pastel]
+      weight: 1.3
+    - id: neon_electric
+      label: "electric neon palette — magenta, cyan, deep violet"
+      tags: [bright, saturated]
+      weight: 1.2
+    - id: golden_hour
+      label: "golden hour palette — amber, peach, warm rose"
+      tags: [warm_tones]
+      weight: 1.1
+    - id: tropical_punch
+      label: "tropical punch palette — coral, turquoise, mango"
+      tags: [bright, saturated]
+      weight: 1.1
+    - id: cotton_candy
+      label: "cotton candy palette — soft lilac, baby blue, cream"
+      tags: [pastel, soft]
+      weight: 1.0
+    - id: disco_gold
+      label: "disco gold palette — champagne, gold sparkle, plum"
+      tags: [sparkle, warm_tones]
+      weight: 1.0
+    - id: cool_mint
+      label: "cool mint palette — aqua, seafoam, soft white"
+      tags: [cool_tones, fresh]
+      weight: 0.9
+    - id: berry_sorbet
+      label: "berry sorbet palette — raspberry, blueberry, vanilla"
+      tags: [saturated, sweet]
+      weight: 0.9
+    - id: sunset_fade
+      label: "sunset fade palette — tangerine to violet gradient"
+      tags: [warm_tones, gradient]
+      weight: 1.0
+    - id: frosted_blue
+      label: "frosted blue palette — ice blue, silver, white"
+      tags: [cool_tones, cold]
+      weight: 0.8
+    - id: jungle_lime
+      label: "jungle lime palette — emerald, lime, sunlit gold"
+      tags: [green, saturated]
+      weight: 0.8
+    - id: retro_arcade
+      label: "retro arcade palette — hot pink, electric blue, black"
+      tags: [saturated, retro]
+      weight: 0.9
+
+  # --- lighting -------------------------------------------------------------
+  lighting:
+    - id: bright_key
+      label: "bright even key light with a soft rim, everything clearly readable"
+      tags: [bright]
+      weight: 1.3
+    - id: disco_sweep
+      label: "sweeping coloured spotlights and rotating mirrorball speckles"
+      tags: [dynamic]
+      weight: 1.1
+    - id: neon_practical
+      label: "neon sign practicals casting magenta and cyan onto the fur"
+      tags: [dynamic, saturated]
+      weight: 1.0
+    - id: golden_backlight
+      label: "warm golden backlight with a glowing fur halo and gentle lens flare"
+      tags: [warm_tones]
+      weight: 1.1
+    - id: soft_window
+      label: "soft diffused window light with gentle shadows"
+      tags: [soft]
+      weight: 0.9
+    - id: stage_spotlight
+      label: "single hard spotlight from above with theatrical falloff"
+      tags: [dramatic]
+      weight: 0.9
+    - id: fairy_glow
+      label: "hundreds of warm fairy lights bokeh-ing in the background"
+      tags: [sparkle, soft]
+      weight: 1.0
+    - id: neon_underglow
+      label: "underglow from the floor tinting everything electric"
+      tags: [dynamic]
+      weight: 0.8
+    - id: sunbeam_shafts
+      label: "dusty sunbeam shafts cutting through the scene"
+      tags: [warm_tones, dramatic]
+      weight: 0.8
+    - id: caustic_shimmer
+      label: "rippling underwater caustics dancing across the fur"
+      tags: [dynamic]
+      requires: [underwater]
+      weight: 2.0
+
+  # --- animals: the performers ---------------------------------------------
+  animals:
+    # kittens
+    - id: orange_tabby_kitten
+      label: "a fluffy orange tabby kitten"
+      species: kitten
+      breed: "orange tabby"
+      tags: [cat, warm_fur]
+      weight: 1.3
+    - id: grey_british_kitten
+      label: "a round-faced grey British Shorthair kitten"
+      species: kitten
+      breed: "British Shorthair"
+      tags: [cat, round]
+      weight: 1.1
+    - id: siamese_kitten
+      label: "a sleek cream Siamese kitten with blue eyes"
+      species: kitten
+      breed: "Siamese"
+      tags: [cat, elegant]
+      weight: 1.0
+    - id: tuxedo_kitten
+      label: "a tiny tuxedo kitten with white mittens"
+      species: kitten
+      breed: "tuxedo"
+      tags: [cat, formal_fur]
+      weight: 1.1
+    - id: calico_kitten
+      label: "a patchwork calico kitten"
+      species: kitten
+      breed: "calico"
+      tags: [cat, colourful]
+      weight: 1.0
+    - id: ragdoll_kitten
+      label: "a fluffy white Ragdoll kitten with sapphire eyes"
+      species: kitten
+      breed: "Ragdoll"
+      tags: [cat, fluffy]
+      weight: 1.0
+    - id: black_kitten
+      label: "a glossy little black kitten with huge green eyes"
+      species: kitten
+      breed: "black shorthair"
+      tags: [cat, dark_fur]
+      weight: 0.9
+    - id: maine_coon_kitten
+      label: "a fluffy Maine Coon kitten with tufted ears"
+      species: kitten
+      breed: "Maine Coon"
+      tags: [cat, fluffy]
+      weight: 0.9
+    # puppies
+    - id: corgi_puppy
+      label: "a stubby-legged corgi puppy"
+      species: puppy
+      breed: "Pembroke corgi"
+      tags: [dog, round]
+      weight: 1.4
+    - id: golden_retriever_puppy
+      label: "a fluffy golden retriever puppy"
+      species: puppy
+      breed: "golden retriever"
+      tags: [dog, warm_fur]
+      weight: 1.3
+    - id: dachshund_puppy
+      label: "a long little dachshund puppy"
+      species: puppy
+      breed: "dachshund"
+      tags: [dog, long]
+      weight: 1.1
+    - id: pug_puppy
+      label: "a squishy-faced pug puppy"
+      species: puppy
+      breed: "pug"
+      tags: [dog, round, comic]
+      weight: 1.1
+    - id: husky_puppy
+      label: "a blue-eyed husky puppy"
+      species: puppy
+      breed: "husky"
+      tags: [dog, cold_ok]
+      weight: 1.1
+    - id: frenchie_puppy
+      label: "a bat-eared French bulldog puppy"
+      species: puppy
+      breed: "French bulldog"
+      tags: [dog, round, comic]
+      weight: 1.2
+    - id: poodle_puppy
+      label: "a curly apricot toy poodle puppy"
+      species: puppy
+      breed: "toy poodle"
+      tags: [dog, fluffy, elegant]
+      weight: 1.0
+    - id: shiba_puppy
+      label: "a smug little shiba inu puppy"
+      species: puppy
+      breed: "shiba inu"
+      tags: [dog, comic]
+      weight: 1.1
+    - id: dalmatian_puppy
+      label: "a spotty dalmatian puppy"
+      species: puppy
+      breed: "dalmatian"
+      tags: [dog, colourful]
+      weight: 0.9
+    - id: beagle_puppy
+      label: "a floppy-eared beagle puppy"
+      species: puppy
+      breed: "beagle"
+      tags: [dog]
+      weight: 1.0
+
+  # --- personalities: drives the funny expressions --------------------------
+  personalities:
+    - id: overconfident
+      label: "wildly overconfident, convinced it invented this dance"
+      weight: 1.2
+    - id: shy_then_wild
+      label: "shy for one beat, then completely unhinged"
+      weight: 1.1
+    - id: focused_pro
+      label: "deadly serious, treating this like a world final"
+      weight: 1.1
+    - id: sleepy_but_committed
+      label: "half asleep but absolutely committed"
+      weight: 1.0
+    - id: chaotic_gremlin
+      label: "a delighted chaotic gremlin with zero rhythm and total joy"
+      weight: 1.2
+    - id: smooth_operator
+      label: "impossibly smooth, never breaks eye contact with the camera"
+      weight: 1.0
+    - id: dramatic_diva
+      label: "a tiny dramatic diva who thinks the crowd is enormous"
+      weight: 1.0
+    - id: bewildered
+      label: "genuinely bewildered but going along with it"
+      weight: 0.9
+
+  # --- accessories: costumes, hats, sunglasses -----------------------------
+  accessories:
+    - id: tiny_sunglasses
+      label: "tiny mirrored sunglasses"
+      tags: [eyewear, cool]
+      weight: 1.4
+    - id: heart_sunglasses
+      label: "heart-shaped pink sunglasses"
+      tags: [eyewear, cute]
+      weight: 1.0
+      excludes: [eyewear]
+    - id: pixel_shades
+      label: "chunky pixelated 8-bit shades"
+      tags: [eyewear, retro]
+      requires: [retro_game]
+      weight: 1.6
+      excludes: [eyewear]
+    - id: cowboy_hat
+      label: "a miniature cowboy hat"
+      tags: [headwear, western]
+      requires: [cowboy]
+      weight: 2.0
+    - id: santa_hat
+      label: "a tiny Santa hat"
+      tags: [headwear, festive]
+      requires: [christmas]
+      weight: 2.0
+    - id: party_hat
+      label: "a striped cone party hat"
+      tags: [headwear, festive]
+      requires: [party]
+      weight: 1.6
+    - id: witch_hat
+      label: "a small pointed witch hat"
+      tags: [headwear, spooky]
+      requires: [spooky_cute]
+      weight: 2.0
+    - id: bucket_hat
+      label: "a bright bucket hat"
+      tags: [headwear, street]
+      weight: 0.9
+    - id: flower_crown
+      label: "a flower crown"
+      tags: [headwear, floral]
+      weight: 0.9
+      excludes: [underwater]
+    - id: snorkel_mask
+      label: "a tiny snorkel mask"
+      tags: [face_gear, water]
+      requires: [underwater]
+      weight: 2.0
+    - id: astronaut_helmet
+      label: "a clear bubble astronaut helmet"
+      tags: [headwear, sci_fi]
+      requires: [space]
+      weight: 2.0
+    - id: superhero_cape
+      label: "a small billowing superhero cape"
+      tags: [body_wear, heroic]
+      requires: [superhero]
+      weight: 2.0
+    - id: ninja_headband
+      label: "a ninja headband with trailing ribbons"
+      tags: [headwear, martial_arts]
+      requires: [ninja]
+      weight: 2.0
+    - id: bow_tie
+      label: "a silky bow tie"
+      tags: [neckwear, formal]
+      weight: 1.0
+    - id: sparkle_collar
+      label: "a rhinestone sparkle collar"
+      tags: [neckwear, sparkle]
+      weight: 1.0
+    - id: gold_chain
+      label: "an oversized gold chain"
+      tags: [neckwear, hiphop]
+      requires: [hiphop]
+      weight: 1.8
+    - id: leg_warmers
+      label: "tiny neon leg warmers"
+      tags: [body_wear, retro]
+      weight: 0.8
+    - id: hawaiian_shirt
+      label: "an open Hawaiian shirt"
+      tags: [body_wear, tropical]
+      requires: [tropical]
+      weight: 1.8
+    - id: floatie_ring
+      label: "a flamingo pool floatie around the middle"
+      tags: [body_wear, water]
+      requires: [beach]
+      weight: 1.6
+    - id: scarf_and_earmuffs
+      label: "a knitted scarf and fluffy earmuffs"
+      tags: [body_wear, warm_clothes]
+      requires: [cold]
+      weight: 1.8
+    - id: tutu
+      label: "a puffy tulle tutu"
+      tags: [body_wear, dance]
+      weight: 0.9
+    - id: headphones
+      label: "oversized DJ headphones around its neck"
+      tags: [neckwear, music_gear]
+      weight: 1.0
+    - id: glow_sticks
+      label: "glow bracelets on both front paws"
+      tags: [paw_wear, glow]
+      requires: [night]
+      weight: 1.2
+    - id: bandana
+      label: "a knotted bandana"
+      tags: [neckwear, casual]
+      weight: 1.0
+    - id: pirate_hat
+      label: "a tiny tricorn pirate hat"
+      tags: [headwear, adventure]
+      requires: [pirate]
+      weight: 2.0
+    - id: tiara
+      label: "a sparkling tiara"
+      tags: [headwear, elegant]
+      requires: [elegant]
+      weight: 1.6
+    - id: sneakers
+      label: "chunky little sneakers on its back paws"
+      tags: [paw_wear, street]
+      weight: 0.8
+
+  # --- dance styles ---------------------------------------------------------
+  dance_styles:
+    - id: disco_spin
+      label: "disco spins"
+      move: "disco spin with a pointed paw"
+      signature_move: "a full mirrorball twirl into a paw-point freeze"
+      tags: [retro, energetic]
+      weight: 1.2
+    - id: hiphop_bounce
+      label: "a hip-hop bounce"
+      move: "two-step hip-hop bounce"
+      signature_move: "a shoulder-pop freeze with both paws crossed"
+      tags: [urban, energetic]
+      weight: 1.3
+    - id: breakdance_spin
+      label: "breakdancing"
+      move: "breakdance shuffle"
+      signature_move: "a tail-spin windmill that ends flat on its back, delighted"
+      tags: [energetic, acrobatic]
+      weight: 1.0
+    - id: tap_dance
+      label: "tap dancing"
+      move: "rapid tap-dance paw patter"
+      signature_move: "a machine-gun tap burst then a top-hat tip"
+      tags: [classic, precise]
+      weight: 0.9
+    - id: ballet_twirl
+      label: "ballet twirls"
+      move: "delicate ballet twirl on tiptoe"
+      signature_move: "an impossibly slow pirouette into a wobbly arabesque"
+      tags: [elegant, graceful]
+      weight: 0.9
+    - id: line_dance
+      label: "a line dance"
+      move: "synchronised country line-dance step"
+      signature_move: "a boot-scoot heel click in perfect unison"
+      tags: [country, synchronised]
+      weight: 0.9
+    - id: salsa_shuffle
+      label: "salsa"
+      move: "hip-swinging salsa step"
+      signature_move: "a spin-and-dip finish with a rose in the teeth"
+      tags: [latin, energetic]
+      weight: 1.0
+    - id: robot_dance
+      label: "the robot"
+      move: "stiff-jointed robot dance"
+      signature_move: "a full-body glitch reboot with blinking eyes"
+      tags: [comic, precise]
+      weight: 1.1
+    - id: moonwalk
+      label: "the moonwalk"
+      move: "smooth backwards moonwalk glide"
+      signature_move: "a moonwalk straight off frame and immediately back on"
+      tags: [retro, smooth]
+      weight: 1.1
+    - id: conga_line
+      label: "a conga line"
+      move: "bouncing conga-line march"
+      signature_move: "the whole line collapsing into a happy pile"
+      tags: [party, group]
+      weight: 0.9
+    - id: sprinkler
+      label: "the sprinkler"
+      move: "goofy sprinkler arm sweep"
+      signature_move: "a sprinkler that spins the whole body around"
+      tags: [comic, goofy]
+      weight: 1.0
+    - id: kpop_choreo
+      label: "sharp K-pop choreography"
+      move: "crisp synchronised K-pop point choreography"
+      signature_move: "a hard four-count formation change with a wink"
+      tags: [precise, synchronised, modern]
+      weight: 1.2
+    - id: swing_jive
+      label: "swing jive"
+      move: "bouncy swing jive kick-step"
+      signature_move: "a partner flip that ends in a triumphant pose"
+      tags: [retro, partner]
+      weight: 0.9
+    - id: headbang
+      label: "headbanging"
+      move: "enthusiastic headbang with flopping ears"
+      signature_move: "a hair-flip headbang that leaves the fur completely wild"
+      tags: [rock, energetic]
+      weight: 0.9
+    - id: floss
+      label: "the floss"
+      move: "arm-swinging floss dance"
+      signature_move: "flossing so fast the paws blur"
+      tags: [comic, modern]
+      weight: 1.0
+    - id: waltz
+      label: "a waltz"
+      move: "graceful three-count waltz"
+      signature_move: "a sweeping dip under the chandelier"
+      tags: [elegant, partner]
+      weight: 0.8
+    - id: shuffle_dance
+      label: "shuffle dancing"
+      move: "fast melbourne shuffle footwork"
+      signature_move: "a running-man burst that scoots across the whole frame"
+      tags: [edm, energetic]
+      weight: 1.1
+    - id: hula
+      label: "a hula dance"
+      move: "swaying hula hip motion"
+      signature_move: "a hula sway that sends the grass skirt flying"
+      tags: [tropical, graceful]
+      weight: 0.8
+    - id: tango
+      label: "a dramatic tango"
+      move: "sharp staccato tango step"
+      signature_move: "a head-snap tango pose held far too seriously"
+      tags: [latin, dramatic, partner]
+      weight: 0.9
+    - id: jazz_hands
+      label: "full jazz-hands showtime"
+      move: "high-energy showtime routine with jazz paws"
+      signature_move: "an enormous jazz-hands finish with a bow"
+      tags: [theatrical, comic]
+      weight: 1.0
+
+  # --- camera moves ---------------------------------------------------------
+  # `id` must match a move in pawparty/media/motion.py; `prompt` is the
+  # natural-language version handed to the video model.
+  camera_moves:
+    - id: slow_push_in
+      label: "slow push in"
+      prompt: "slow smooth dolly push in toward the subject"
+      weight: 1.3
+    - id: slow_pull_out
+      label: "slow pull out"
+      prompt: "slow dolly pull back revealing more of the scene"
+      weight: 1.0
+    - id: pan_left_right
+      label: "pan left to right"
+      prompt: "smooth horizontal pan from left to right following the action"
+      weight: 1.0
+    - id: pan_right_left
+      label: "pan right to left"
+      prompt: "smooth horizontal pan from right to left following the action"
+      weight: 1.0
+    - id: tilt_up
+      label: "tilt up"
+      prompt: "camera tilts up from paws to face"
+      weight: 0.9
+    - id: handheld_float
+      label: "handheld float"
+      prompt: "subtle handheld float with gentle organic drift"
+      weight: 1.2
+    - id: orbit
+      label: "orbit"
+      prompt: "smooth arc orbiting around the subject"
+      weight: 1.1
+    - id: punch_in
+      label: "rhythmic punch-in"
+      prompt: "rhythmic punch-in zoom snapping on the beat"
+      weight: 1.0
+    - id: static
+      label: "locked off"
+      prompt: "locked-off static camera, subject perfectly centred"
+      weight: 0.6
+
+  # --- transitions ----------------------------------------------------------
+  transitions:
+    - id: cut
+      label: "hard cut"
+      weight: 1.5
+    - id: crossfade
+      label: "crossfade"
+      weight: 1.0
+    - id: whip_pan
+      label: "whip pan"
+      weight: 1.2
+    - id: zoom_blur
+      label: "zoom blur"
+      weight: 1.0
+    - id: flash
+      label: "flash cut"
+      weight: 0.9
+    - id: circle_open
+      label: "circle open"
+      weight: 0.7
+    - id: wipe_up
+      label: "wipe up"
+      weight: 0.8
+    - id: pixelize
+      label: "pixelize"
+      weight: 0.6
+    - id: dissolve
+      label: "dissolve"
+      weight: 0.8
+
+  # --- visual effects -------------------------------------------------------
+  effects:
+    - id: confetti_burst
+      label: "bursts of colourful confetti"
+      tags: [festive]
+      weight: 1.2
+    - id: sparkle_trails
+      label: "sparkle trails following every paw"
+      tags: [sparkle]
+      weight: 1.2
+    - id: bokeh_lights
+      label: "drifting bokeh light orbs"
+      tags: [soft]
+      weight: 1.1
+    - id: bubble_stream
+      label: "streams of iridescent bubbles"
+      tags: [playful]
+      weight: 0.9
+    - id: petal_fall
+      label: "slow-falling flower petals"
+      tags: [soft, floral]
+      excludes: [cold, underwater]
+      weight: 0.8
+    - id: light_streaks
+      label: "neon light streaks trailing the motion"
+      tags: [dynamic]
+      requires: [neon]
+      weight: 1.6
+    - id: snow_drift
+      label: "gently drifting snowflakes"
+      tags: [cold]
+      requires: [cold]
+      weight: 1.8
+    - id: star_twinkle
+      label: "twinkling stars popping around the subject"
+      tags: [sparkle]
+      weight: 1.0
+    - id: heart_pops
+      label: "little hearts popping into the air"
+      tags: [cute]
+      weight: 0.9
+    - id: lens_flare
+      label: "warm anamorphic lens flares"
+      tags: [cinematic]
+      weight: 0.8
+    - id: motion_trails
+      label: "soft motion trails on fast movements"
+      tags: [dynamic]
+      weight: 0.9
+    - id: glitter_floor
+      label: "a glitter-reflective floor throwing light upward"
+      tags: [sparkle]
+      weight: 0.8
+    - id: pixel_sparks
+      label: "8-bit pixel sparks on every beat"
+      tags: [retro]
+      requires: [retro_game]
+      weight: 1.8
+    - id: paint_splash
+      label: "harmless splashes of bright paint on the beat"
+      tags: [colourful]
+      weight: 0.7
+
+  # --- music vibes ----------------------------------------------------------
+  # `bpm` seeds the beat grid; the music provider matches or generates to it.
+  music_vibes:
+    - id: disco_funk
+      label: "disco funk with a slap bass line"
+      bpm: 118
+      energy: high
+      tags: [disco, funk, retro, high]
+      weight: 1.2
+    - id: boom_bap
+      label: "playful boom-bap hip-hop"
+      bpm: 92
+      energy: medium
+      tags: [hiphop, urban, medium]
+      weight: 1.2
+    - id: tropical_house
+      label: "tropical house with steel drums"
+      bpm: 108
+      energy: medium
+      tags: [tropical, summer, medium]
+      weight: 1.1
+    - id: chiptune_party
+      label: "upbeat chiptune"
+      bpm: 140
+      energy: high
+      tags: [chiptune, retro_game, high]
+      excludes: [elegant, ballroom, formal]
+      weight: 1.0
+    - id: big_room_edm
+      label: "big-room EDM with a bright drop"
+      bpm: 128
+      energy: high
+      tags: [edm, party, high]
+      weight: 1.2
+    - id: swing_jazz
+      label: "bouncy swing jazz"
+      bpm: 124
+      energy: medium
+      tags: [swing, retro, medium]
+      weight: 0.9
+    - id: country_stomp
+      label: "country stomp-and-clap"
+      bpm: 116
+      energy: medium
+      tags: [country, farm, medium]
+      excludes: [cyberpunk, space, rock, underwater]
+      weight: 0.9
+    - id: latin_salsa
+      label: "brass-led latin salsa"
+      bpm: 102
+      energy: high
+      tags: [latin, high]
+      weight: 0.9
+    - id: lofi_bounce
+      label: "cozy lo-fi with a soft kick"
+      bpm: 84
+      energy: low
+      tags: [lofi, cozy, calm, low]
+      # A sleepy bed under a rave or a superhero beat kills the energy.
+      excludes: [party, concert, action, hiphop]
+      weight: 0.8
+    - id: orchestral_sparkle
+      label: "sparkling orchestral pizzicato"
+      bpm: 112
+      energy: medium
+      tags: [cinematic, elegant, medium]
+      weight: 0.9
+    - id: synthwave
+      label: "neon synthwave"
+      bpm: 110
+      energy: medium
+      tags: [synthwave, neon, cyberpunk, medium]
+      weight: 1.0
+    - id: pop_punk
+      label: "cheerful pop-punk"
+      bpm: 150
+      energy: high
+      tags: [rock, high]
+      weight: 0.9
+    - id: kpop_bright
+      label: "bright K-pop with a chanted hook"
+      bpm: 126
+      energy: high
+      tags: [modern, party, high]
+      weight: 1.1
+    - id: holiday_bells
+      label: "jingling holiday pop"
+      bpm: 120
+      energy: medium
+      tags: [festive, christmas, winter, medium]
+      # Sleigh bells over a cyberpunk alley is the wrong kind of funny.
+      requires: [festive]
+      excludes: [cyberpunk, underwater, jungle]
+      weight: 0.8
+
+  # --- hooks: the 0-2s promise ---------------------------------------------
+  hooks:
+    - id: impossible_first_frame
+      label: "a first frame so absurdly cute it stops the thumb mid-scroll"
+      weight: 1.2
+    - id: mid_action_open
+      label: "opening already mid-dance, no build-up at all"
+      weight: 1.3
+    - id: direct_eye_contact
+      label: "direct eye contact with the camera before the first beat lands"
+      weight: 1.1
+    - id: unexpected_outfit
+      label: "an outfit that makes no sense and total sense at once"
+      weight: 1.1
+    - id: tiny_vs_big
+      label: "a comically tiny dancer next to something enormous"
+      weight: 0.9
+    - id: freeze_then_go
+      label: "a half-second freeze, then an explosion of movement"
+      weight: 1.0
+
+  # --- payoffs: the reward the hook promised -------------------------------
+  payoffs:
+    - id: synchronised_finish
+      label: "nails a perfectly synchronised final pose together"
+      hint: "final pose"
+      weight: 1.2
+    - id: comedic_faceplant
+      label: "goes for a big finish and gently faceplants, then pops up beaming"
+      hint: "faceplant"
+      weight: 1.1
+    - id: costume_reveal
+      label: "spins once and reappears in a completely different outfit"
+      hint: "outfit change"
+      weight: 1.1
+    - id: crowd_goes_wild
+      label: "brings the whole background crowd to its feet"
+      hint: "crowd reaction"
+      weight: 1.0
+    - id: unexpected_guest
+      label: "is joined by an unexpected extra dancer sliding into frame"
+      hint: "surprise guest"
+      weight: 1.0
+    - id: slow_mo_finale
+      label: "hits the last beat in glorious slow motion with sparks flying"
+      hint: "slow-mo finish"
+      weight: 1.0
+    - id: happy_pile
+      label: "collapses into a delighted happy pile of paws"
+      hint: "pile-up"
+      weight: 1.0
+    - id: takes_a_bow
+      label: "takes an enormous theatrical bow"
+      hint: "bow"
+      weight: 0.9
+
+# -----------------------------------------------------------------------------
+# Copy — captions, hooks, pinned comments
+# -----------------------------------------------------------------------------
+# Placeholders available: {dance} {theme} {setting} {animal} {animals} {lead}
+#                         {music} {payoff_hint} {occasion} {emoji}
+copy:
+  caption_count: 5
+  max_caption_chars: 90
+  max_hook_chars: 42
+  max_emoji: 2
+
+  emoji: ["🐱", "🐶", "✨", "🥹", "😭", "🕺", "💃", "🐾", "🎉", "😻"]
+
+  voice_rules:
+    - "Warm, playful, never sarcastic."
+    - "Talk to one person, not an audience."
+    - "Ask something answerable in three words."
+    - "Never explain the joke."
+    - "No baby-talk spelling."
+
+  # Ranking favours questions, ratings and comparisons, so most patterns lean
+  # that way — but keep a few statements so the feed doesn't read as a quiz.
+  caption_patterns:
+    - "Rate this {dance} from 1-10 {emoji}"
+    - "Which one wins? {emoji}"
+    - "Who did it better? {emoji}"
+    - "Too cute to scroll past {emoji}"
+    - "Wait for the {payoff_hint} {emoji}"
+    - "{theme} but make it adorable {emoji}"
+    - "Name a better duo. I'll wait {emoji}"
+    - "The {lead} understood the assignment {emoji}"
+    - "Tell me this isn't the best {dance} you've seen today {emoji}"
+    - "POV: you found the {theme} {emoji}"
+    - "This took 47 takes {emoji}"
+    - "Team {animal}? {emoji}"
+    - "Watch it twice. You'll spot it {emoji}"
+    - "{music} was the right call {emoji}"
+    - "Stop scrolling. {emoji}"
+    - "The confidence is unmatched {emoji}"
+    - "Would you survive this {dance}? {emoji}"
+    - "Send this to someone who needs it today {emoji}"
+
+  onscreen_hooks:
+    - "WAIT FOR IT"
+    - "RATE THIS 1-10"
+    - "WHO DID IT BETTER?"
+    - "POV: {theme}"
+    - "DON'T SCROLL"
+    - "WATCH THE ENDING"
+    - "PICK YOUR FIGHTER"
+    - "THE CONFIDENCE"
+    - "IT GETS BETTER"
+
+  comment_seeds:
+    - "Team {animal} or nah? 👀"
+    - "Drop a 🐾 if you'd adopt {lead}"
+    - "Which one had the better moves?"
+    - "Rate the ending out of 10 👇"
+    - "Who should dance next?"
+    - "Be honest — could you do this?"
+
+# -----------------------------------------------------------------------------
+# Hashtags
+# -----------------------------------------------------------------------------
+hashtags:
+  max_total: 8
+  broad_count: 2
+  rotating_count: 1
+
+  # Constant — these define the account to the algorithm. Change rarely.
+  core:
+    - cutepets
+    - aianimals
+    - dancingpets
+
+  # High-volume discovery tags. Two per post, sampled.
+  broad:
+    - fyp
+    - foryou
+    - viral
+    - cute
+    - animals
+    - petsoftiktok
+
+  # OPERATOR-MAINTAINED. Add trends you have actually verified in the app.
+  # Deliberately not auto-fetched — TikTok has no public trending API and
+  # scraping one would be a fragile, ToS-risky dependency in a daily job.
+  rotating:
+    - aiart
+    - catsoftiktok
+    - dogsoftiktok
+    - puppylove
+    - kittenvideos
+
+  occasions:
+    christmas: [christmas, holidaypets]
+    halloween: [halloween, spookyseason]
+    valentines: [valentines, valentinesday]
+    new_year: [newyear, newyearseve]
+    summer: [summervibes]
+    spring: [springvibes]
+    autumn: [fallvibes]
+    birthday: [birthday]
+    easter: [easter]
+    st_patricks: [stpatricksday]
+
+  # Tags that only make sense for one species. A cat tag on a dogs-only video
+  # pulls the wrong audience, who then scroll — worse than no tag at all.
+  # Anything listed here is dropped unless that species is in the cast.
+  species_tags:
+    kitten: [catsoftiktok, catlover, kittenvideos, catsofinstagram, aicats, dancingcats]
+    puppy: [dogsoftiktok, puppylove, dogsofinstagram, aidogs, dancingdogs, doglover]
+
+  # Never emit these — banned, shadow-limited, or off-brand.
+  banned:
+    - followforfollow
+    - like4like

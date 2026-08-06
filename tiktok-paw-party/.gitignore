@@ -1,0 +1,27 @@
+# Workspace output — regenerable, and large. Never commit it.
+Videos/
+*.mp4
+*.wav
+*.mp3
+*.m4a
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/

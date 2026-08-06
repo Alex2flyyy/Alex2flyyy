@@ -1,0 +1,16 @@
+{#-
+  First-frame / keyframe image prompt.
+
+  Used by image-to-video providers (generate a still, then animate it). Same
+  ordering logic as video_beat.j2, but describes a frozen moment and adds
+  composition language that image models respond to.
+-#}
+{{ cast_description }}, {{ frozen_action }}, in a {{ concept.setting_label }}.
+{{ theme_description }}.
+Composition: vertical 9:16 portrait, subject centred and large in frame, clean separation from background, shallow depth of field.
+Camera: {{ beat.camera_prompt }}.
+Lighting: {{ concept.lighting }}.
+Colour: {{ concept.palette_label }}.
+{% if concept.effects %}Effects: {{ concept.effects | join(', ') }}.
+{% endif -%}
+Style: {{ style.render_style }}, {{ style.quality_anchor }}, expressive eyes, exaggerated cute proportions, wholesome and family-friendly.

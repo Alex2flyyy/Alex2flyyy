@@ -1,0 +1,8 @@
+# Runtime dependencies for PawParty.
+# External (non-pip) requirement: ffmpeg + ffprobe >= 5.0 on PATH.
+PyYAML>=6.0
+Jinja2>=3.1
+requests>=2.31
+python-dotenv>=1.0
+
+# Dev / test extras (install with: pip install -r requirements-dev.txt)

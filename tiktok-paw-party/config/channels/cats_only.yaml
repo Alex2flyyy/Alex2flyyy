@@ -1,0 +1,66 @@
+# =============================================================================
+# Channel: cats_only
+# =============================================================================
+# A second faceless account, built by inheriting the flagship channel and
+# subtracting what doesn't belong. This is the whole scaling story: ~50 lines
+# for a complete, independently-tunable channel with its own novelty history,
+# its own voice, and its own hashtag identity.
+#
+#   pawparty run --channel cats_only --count 5
+# =============================================================================
+
+extends: kittens_puppies
+
+display_name: "Kitten Club"
+description: >-
+  Kittens only. Same bright, wholesome, loop-friendly dance format — narrower
+  cast so the account reads as a single clear identity.
+
+# Drop every dog from the inherited cast.
+vocabulary_remove:
+  animals:
+    - corgi_puppy
+    - golden_retriever_puppy
+    - dachshund_puppy
+    - pug_puppy
+    - husky_puppy
+    - frenchie_puppy
+    - poodle_puppy
+    - shiba_puppy
+    - dalmatian_puppy
+    - beagle_puppy
+
+structure:
+  # Solo cats read as more "character-driven" than duos; skew smaller.
+  cast_size_weights:
+    "1": 0.45
+    "2": 0.40
+    "3": 0.15
+
+copy:
+  emoji: ["🐱", "😻", "✨", "🐾", "🥹", "😹"]
+  caption_patterns:
+    - "Rate this {dance} from 1-10 {emoji}"
+    - "The {lead} understood the assignment {emoji}"
+    - "Too cute to scroll past {emoji}"
+    - "Wait for the {payoff_hint} {emoji}"
+    - "Cats really do have rhythm {emoji}"
+    - "POV: you found the {theme} {emoji}"
+    - "Name a smoother mover {emoji}"
+    - "This cat has more rhythm than me {emoji}"
+    - "Watch it twice {emoji}"
+  comment_seeds:
+    - "Rate the ending out of 10 👇"
+    - "Drop a 🐾 if you'd adopt this one"
+    - "Which move was the best?"
+
+hashtags:
+  core:
+    - catsoftiktok
+    - aicats
+    - dancingcats
+  rotating:
+    - kittenvideos
+    - catlover
+    - aiart
+    - catsofinstagram

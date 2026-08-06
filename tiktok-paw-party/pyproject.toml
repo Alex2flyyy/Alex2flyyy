@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pawparty"
+version = "1.0.0"
+description = "Automated faceless short-form video pipeline for AI-generated dancing kittens and puppies."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "PyYAML>=6.0",
+    "Jinja2>=3.1",
+    "requests>=2.31",
+    "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "pytest-cov>=4.1"]
+
+[project.scripts]
+pawparty = "pawparty.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["pawparty*"]
+
+[tool.setuptools.package-data]
+pawparty = ["prompts/templates/*.j2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["ffmpeg: test requires a working ffmpeg/ffprobe on PATH"]

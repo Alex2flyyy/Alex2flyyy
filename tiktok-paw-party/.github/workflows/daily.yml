@@ -1,0 +1,97 @@
+# Daily batch on GitHub Actions.
+#
+# TEMPLATE — move this to the repository root (.github/workflows/) to activate.
+#
+# Two caveats before relying on this for a real account:
+#
+#   1. Scheduled workflows are best-effort. Runner backlog routinely delays
+#      them, and GitHub disables schedules on repos inactive for 60 days.
+#   2. Artifacts expire (90 days max). Finished videos need somewhere durable —
+#      S3, R2, a release — or they're gone.
+#
+# For a live account, a small always-on box driven by cron is the better answer
+# (see docs/RUNBOOK.md). Actions is genuinely useful for the free preview run as
+# a smoke test on every push, which is what the `push` trigger below does.
+
+name: Daily batch
+
+on:
+  schedule:
+    - cron: "0 12 * * *"   # 12:00 UTC
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      count:
+        description: "Number of videos"
+        default: "7"
+      channel:
+        description: "Channel name"
+        default: "kittens_puppies"
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install ffmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core
+
+      - name: Install PawParty
+        run: pip install -e . -r requirements-dev.txt
+
+      - name: Test
+        run: pytest -q
+
+      - name: Health check
+        run: pawparty doctor
+
+      # A push builds one free preview video as a smoke test. A scheduled or
+      # manual run does the real batch.
+      - name: Render
+        env:
+          # Add these as repository secrets to use real providers. Absent, the
+          # pipeline degrades to `synth` and produces previews.
+          REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+          FAL_KEY: ${{ secrets.FAL_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          PAWPARTY_DAILY_BUDGET_USD: ${{ vars.PAWPARTY_DAILY_BUDGET_USD || '6.00' }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            pawparty run --count 1 --concurrency 2
+          else
+            pawparty run \
+              --count "${{ github.event.inputs.count || 7 }}" \
+              --channel "${{ github.event.inputs.channel || 'kittens_puppies' }}" \
+              --concurrency 2 --schedule --export
+          fi
+
+      - name: Upload finished videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: finished-${{ github.run_number }}
+          path: |
+            Videos/Finished/
+            Videos/Scheduled/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ github.run_number }}
+          path: Videos/Logs/
+          retention-days: 14
+          if-no-files-found: warn

@@ -1,0 +1,28 @@
+{#-
+  Video-generation prompt for one beat.
+
+  Structure follows what current text-to-video models respond to best:
+    1. Subject + action first (models weight early tokens most)
+    2. Wardrobe / character detail
+    3. Environment
+    4. Camera + lens
+    5. Lighting + colour
+    6. Style + quality anchors
+
+  Keep it one dense paragraph. Bulleted prompts get flattened by most APIs and
+  the ordering signal is lost.
+-#}
+{{ beat.action }}. {{ cast_description }}.
+{% if beat.role == 'hook' %}The very first frame is already mid-motion — no fade in, no empty stage, the subject fills the centre of a vertical frame and looks straight at the lens.
+{% elif beat.role == 'switch' %}The energy changes sharply on this beat — a new rhythm, a new angle, a visible surprise.
+{% elif beat.role in ('payoff', 'payoff_loop') %}This is the funniest moment of the clip; expressions are big, timing is snappy.
+{% elif beat.role == 'loop' %}Ends in exactly the pose the clip opened on so the video restarts seamlessly.
+{% endif -%}
+Scene: {{ concept.setting_label }}, {{ theme_description }}.
+Camera: {{ beat.camera_prompt }}, vertical 9:16 framing, subject centred with headroom.
+Lighting: {{ concept.lighting }}.
+Colour: {{ concept.palette_label }}.
+{% if concept.effects %}Visual effects: {{ concept.effects | join(', ') }}.
+{% endif -%}
+Motion: smooth {{ music.bpm }} BPM rhythm, movements land on the beat, fluid natural animal locomotion, no stutter, no morphing limbs.
+Style: {{ style.render_style }}, {{ style.quality_anchor }}, adorable, wholesome, family-friendly, bright and high-contrast so it reads on a phone screen.
