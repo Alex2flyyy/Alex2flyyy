@@ -27,7 +27,7 @@ jobs:
           POSTGRES_DB: leadgen_test
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U leadgen"
+          --health-cmd "pg_isready -U leadgen -d leadgen_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -82,4 +82,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build image
-        run: docker build -t leadgen:ci --target api leadgen
+        # Context is "." because the workflow-level `defaults.run.working-directory`
+        # already puts this step inside leadgen/. Passing "leadgen" here would
+        # resolve to leadgen/leadgen.
+        run: docker build -t leadgen:ci --target api .

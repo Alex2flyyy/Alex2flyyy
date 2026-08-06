@@ -28,8 +28,11 @@ RUN mkdir -p /app/data/exports /app/data/screenshots /app/data/reports \
     && chown -R pwuser:pwuser /app
 USER pwuser
 
+# Single quotes only inside the outer double quotes. Nested escaped quotes here
+# are parsed by both the Dockerfile parser and the shell, and break in ways that
+# only surface at container runtime.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD python -c "import httpx,os,sys; sys.exit(0 if httpx.get(f'http://127.0.0.1:{os.getenv(\"LEADGEN_API_PORT\",\"8000\")}/health', timeout=4).status_code==200 else 1)"
+    CMD python -c "import os,sys,httpx; port=os.getenv('LEADGEN_API_PORT','8000'); sys.exit(0 if httpx.get('http://127.0.0.1:'+port+'/health', timeout=4).status_code==200 else 1)"
 
 EXPOSE 8000
 
