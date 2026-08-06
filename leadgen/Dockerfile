@@ -4,13 +4,22 @@
 # (fonts, codecs, X libs).  Installing those by hand on a slim Python image is
 # the single biggest source of "works locally, breaks in CI" for this project,
 # so we start from the image Microsoft maintains for exactly that purpose.
+#
+# It MUST be a `-noble` (Ubuntu 24.04) tag: the `-jammy` images ship Python
+# 3.10, and this package requires >=3.11, so pip refuses to install on them.
+# Keep this tag's version in step with the `playwright` pin in pyproject.toml —
+# the image's preinstalled browsers are matched to that release.
 # -----------------------------------------------------------------------------
-FROM mcr.microsoft.com/playwright/python:v1.45.0-jammy AS base
+FROM mcr.microsoft.com/playwright/python:v1.62.0-noble AS base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # Ubuntu 24.04 marks its system Python as externally managed (PEP 668) and
+    # pip refuses to install into it. In a single-purpose container there is no
+    # environment to protect, so opt out rather than add a venv layer.
+    PIP_BREAK_SYSTEM_PACKAGES=1 \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 WORKDIR /app
@@ -22,6 +31,12 @@ RUN pip install --no-cache-dir -e .
 
 COPY . .
 RUN pip install --no-cache-dir -e .
+
+# The base image preinstalls browsers for its own Playwright release. If pip
+# resolved a different playwright version, those revisions no longer match and
+# every render fails at runtime with "executable doesn't exist". This is a
+# no-op when they agree, and downloads the correct build when they don't.
+RUN python -m playwright install chromium
 
 # Non-root at runtime.  The Playwright image already defines `pwuser`.
 RUN mkdir -p /app/data/exports /app/data/screenshots /app/data/reports \

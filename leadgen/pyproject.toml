@@ -110,6 +110,11 @@ disallow_untyped_defs = false
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# Put the project root on sys.path so `from tests.conftest import ...` resolves.
+# Without this, `python -m pytest` works (it prepends the cwd) but the bare
+# `pytest` console script does not — so the suite passes locally and fails in
+# CI. Setting it here makes both invocations behave the same.
+pythonpath = ["."]
 addopts = "-q --strict-markers"
 markers = [
     "integration: requires network or a live database",
