@@ -28,6 +28,10 @@ on:
         description: "Qualified leads wanted"
         required: false
         default: "50"
+      minutes:
+        description: "Wall-clock budget; lower it for a quick test run"
+        required: false
+        default: "90"
 
 concurrency:
   # Never let a manual run collide with the scheduled one — two pipelines
@@ -132,7 +136,7 @@ jobs:
           leadgen --json-logs run-daily \
             --location "${{ github.event.inputs.location || 'home_base_25mi' }}" \
             --target "${{ github.event.inputs.target || 50 }}" \
-            --minutes 90 \
+            --minutes "${{ github.event.inputs.minutes || 90 }}" \
             $NICHE_ARGS
 
       - name: Push to Airtable
