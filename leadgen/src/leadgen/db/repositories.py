@@ -570,6 +570,35 @@ def _priority_for(score: int) -> int:
 # =============================================================================
 
 
+def _align_keys(rows: list[dict[str, Any]], model: Any) -> list[dict[str, Any]]:
+    """Give every row in a multi-row INSERT the same set of keys.
+
+    SQLAlchemy compiles a multi-row ``VALUES`` clause from the *first* row's
+    keys, then requires every later row to supply those same keys. A row that
+    omits one raises ``CompileError`` at compile time unless the column has a
+    Python-side default it can substitute.
+
+    Callers naturally produce heterogeneous dicts — a phone contact has no
+    ``label``, a social link has no ``person_name`` — so normalizing belongs
+    here rather than in every caller, where forgetting it is silent until the
+    one run that happens to find both a phone and an email.
+
+    Missing keys take the column's Python-side default when it has a scalar
+    one, so ``source`` and ``confidence`` still get their declared values
+    instead of being written as NULL.
+    """
+    keys = {key for row in rows for key in row}
+    columns = model.__table__.columns
+    filler: dict[str, Any] = {}
+    for key in keys:
+        column = columns.get(key)
+        default = getattr(column, "default", None) if column is not None else None
+        # Callable and SQL-expression defaults cannot be materialized here;
+        # leaving them None lets the database apply its own.
+        filler[key] = default.arg if default is not None and default.is_scalar else None
+    return [{**filler, **row} for row in rows]
+
+
 class ContactRepository:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
@@ -577,7 +606,10 @@ class ContactRepository:
     async def upsert_many(self, business_id: int, contacts: list[dict[str, Any]]) -> int:
         if not contacts:
             return 0
-        rows = [{**c, "business_id": business_id} for c in contacts]
+        rows = _align_keys(
+            [{**c, "business_id": business_id} for c in contacts],
+            Contact,
+        )
         stmt = (
             pg_insert(Contact)
             .values(rows)

@@ -104,43 +104,54 @@ class OpenStreetMapProvider(Provider):
                 timeout=90.0,  # Overpass is slow by design; its own timeout is 40s
             )
 
-            if response.status_code in (429, 504):
-                # Overpass sheds load aggressively. Rotate to the mirror rather
-                # than retrying the instance that just told us it is busy.
-                self._endpoint_index = (self._endpoint_index + 1) % len(OVERPASS_ENDPOINTS)
-                log.warning("osm.endpoint_busy", endpoint=endpoint, status=response.status_code)
-                continue
             if not response.ok:
                 self.errors += 1
-                self._consecutive_failures += 1
+                # Overpass explains itself in the body - "rate_limited", a parse
+                # error with a line number, a maintenance notice. Status alone is
+                # not diagnosable: a bare 406 could be a bad query, an anti-abuse
+                # rule, or a mirror refusing this User-Agent, and those call for
+                # completely different fixes.
+                detail = " ".join((response.text or "").split())[:200]
                 log.warning(
                     "osm.request_failed",
+                    endpoint=endpoint,
                     status=response.status_code,
                     error=response.error,
-                    consecutive=self._consecutive_failures,
+                    detail=detail or None,
                 )
-                # A reachability problem — a blocked egress, a firewall, a dead
-                # mirror — fails identically on every cell. Without this the
-                # provider retries all of them and burns the whole discovery
-                # budget producing nothing, while the run still looks healthy.
-                if self._consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES:
-                    self._mark_quota_exhausted()
-                    log.error(
-                        "osm.giving_up",
-                        failures=self._consecutive_failures,
-                        hint="Overpass is unreachable from this host; check egress "
-                        "or set LEADGEN_GOOGLE_MAPS_API_KEY to use Google Places",
-                    )
-                return None
+                # Try the other mirror before concluding anything. Whatever the
+                # cause - busy, blocked, or picky - it is a property of the
+                # instance we just asked, and the alternative may well answer.
+                self._endpoint_index = (self._endpoint_index + 1) % len(OVERPASS_ENDPOINTS)
+                continue
+
             try:
                 data = json.loads(response.text)
             except ValueError:
                 self.errors += 1
-                self._consecutive_failures += 1
-                return None
+                log.warning("osm.bad_json", endpoint=endpoint)
+                self._endpoint_index = (self._endpoint_index + 1) % len(OVERPASS_ENDPOINTS)
+                continue
+
             self._consecutive_failures = 0
             return data
-        self._mark_quota_exhausted()
+
+        # Only a request that every endpoint refused counts against the
+        # provider. A single mirror having a bad day is not a reason to stop.
+        self._consecutive_failures += 1
+        # A reachability problem - blocked egress, a firewall, dead mirrors -
+        # fails identically on every cell. Without this the provider retries all
+        # of them and burns the whole discovery budget producing nothing, while
+        # the run still looks healthy.
+        if self._consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES:
+            self._mark_quota_exhausted()
+            log.error(
+                "osm.giving_up",
+                failures=self._consecutive_failures,
+                hint="every Overpass endpoint refused this many requests in a row; "
+                "check the `detail` on the osm.request_failed lines above, or set "
+                "LEADGEN_GOOGLE_MAPS_API_KEY to use Google Places instead",
+            )
         return None
 
     def _parse(self, element: dict[str, Any], cell: SearchCell, niche: Niche) -> RawBusiness | None:

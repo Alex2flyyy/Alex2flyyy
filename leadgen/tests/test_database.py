@@ -367,6 +367,43 @@ class TestContactsAndSuppression:
         assert await repo.upsert_many(business.id, rows) == 0
         assert len(await repo.for_business(business.id)) == 1
 
+    async def test_contacts_with_differing_keys(self, session, raw_business) -> None:
+        """A real audit yields rows with different keys; the insert must cope.
+
+        ``ContactFindings.as_contact_rows`` emits ``label`` and ``person_name``
+        for emails, neither for phones, and no ``is_primary`` for socials.
+        SQLAlchemy compiles a multi-row VALUES clause from the first row's keys
+        and raises CompileError on any later row that omits one, so this
+        combination crashed the pipeline in production while the homogeneous
+        case above passed.
+        """
+        business = await _make_business(session, raw_business)
+        repo = ContactRepository(session)
+        rows = [
+            {
+                "kind": "email",
+                "value": "owner@bobs.example",
+                "source": "website",
+                "label": "direct",
+                "person_name": "Bob",
+                "is_generic": False,
+                "is_primary": True,
+                "confidence": 0.85,
+            },
+            {"kind": "phone", "value": "+16265550101", "source": "website", "confidence": 0.8},
+            {"kind": "social", "value": "https://fb.example/bobs", "label": "facebook"},
+        ]
+        assert await repo.upsert_many(business.id, rows) == 3
+
+        stored = {c.kind: c for c in await repo.for_business(business.id)}
+        assert stored["phone"].label is None
+        assert stored["social"].person_name is None
+        # Columns omitted by a row must fall back to their declared default,
+        # not to NULL.
+        assert stored["social"].source == "website"
+        assert stored["phone"].is_primary is False
+        assert stored["social"].confidence == pytest.approx(0.5)
+
     async def test_suppression_roundtrip(self, session) -> None:
         repo = SuppressionRepository(session)
         await repo.add("email", "stop@example.com", "opted out")
