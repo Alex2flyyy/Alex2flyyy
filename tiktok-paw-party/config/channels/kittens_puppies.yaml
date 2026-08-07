@@ -460,10 +460,12 @@ vocabulary:
     - id: disco_sweep
       label: "sweeping coloured spotlights and rotating mirrorball speckles"
       tags: [dynamic]
+      excludes: [daylight, underwater_scene]
       weight: 1.1
     - id: neon_practical
       label: "neon sign practicals casting magenta and cyan onto the fur"
       tags: [dynamic, saturated]
+      excludes: [daylight]
       weight: 1.0
     - id: golden_backlight
       label: "warm golden backlight with a glowing fur halo and gentle lens flare"
@@ -472,10 +474,13 @@ vocabulary:
     - id: soft_window
       label: "soft diffused window light with gentle shadows"
       tags: [soft]
+      # Window light implies an interior with a window in it.
+      excludes: [outdoors, night, underwater_scene, cosmic]
       weight: 0.9
     - id: stage_spotlight
       label: "single hard spotlight from above with theatrical falloff"
       tags: [dramatic]
+      excludes: [daylight]
       weight: 0.9
     - id: fairy_glow
       label: "hundreds of warm fairy lights bokeh-ing in the background"
@@ -484,10 +489,13 @@ vocabulary:
     - id: neon_underglow
       label: "underglow from the floor tinting everything electric"
       tags: [dynamic]
+      excludes: [daylight]
       weight: 0.8
     - id: sunbeam_shafts
       label: "dusty sunbeam shafts cutting through the scene"
       tags: [warm_tones, dramatic]
+      # Sunbeams need a sun. This one landed on an indoor disco at night.
+      excludes: [night, cosmic, underwater_scene]
       weight: 0.8
     - id: caustic_shimmer
       label: "rippling underwater caustics dancing across the fur"

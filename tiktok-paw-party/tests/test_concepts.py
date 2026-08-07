@@ -246,3 +246,45 @@ def test_most_content_stays_evergreen(generator):
     occasions = [generator.generate_one(seed=s, date=december).occasion for s in range(60)]
     seasonal = sum(1 for o in occasions if o != "none")
     assert seasonal < 40, f"{seasonal}/60 videos were seasonal — bias is too high"
+
+
+# --------------------------------------------------------------------------- #
+# Scene coherence
+# --------------------------------------------------------------------------- #
+def test_lighting_matches_the_time_of_day(generator, channel):
+    """Daylight lighting must never land on a night scene, or vice versa.
+
+    Caught in the wild: "dusty sunbeam shafts" on an indoor Disco night. The
+    prompt reads as broken to a viewer and confuses the video model.
+    """
+    lighting_tags = {
+        entry.get("label", entry["id"]): (
+            set(entry.get("tags", [])), set(entry.get("excludes", []))
+        )
+        for entry in channel.vocabulary["lighting"]
+    }
+    theme_tags = {
+        entry["id"]: set(entry.get("tags", []))
+        for entry in channel.vocabulary["themes"]
+    }
+
+    for seed in range(80):
+        concept = generator.generate_one(seed=seed)
+        excludes = lighting_tags.get(concept.lighting, (set(), set()))[1]
+        scene = theme_tags.get(concept.theme, set())
+        collision = excludes & scene
+        assert not collision, (
+            f"seed {seed}: lighting {concept.lighting!r} excludes {collision} "
+            f"but theme {concept.theme!r} carries it"
+        )
+
+
+def test_indoor_themes_do_not_get_outdoor_only_settings(generator):
+    """A generic fallback setting is fine; a contradictory one is not."""
+    for seed in range(60):
+        concept = generator.generate_one(seed=seed)
+        # Underwater is the sharpest test: nothing dry belongs in a reef.
+        if concept.setting == "coral_reef":
+            assert concept.theme == "underwater_reef", (
+                f"seed {seed}: coral reef setting on theme {concept.theme!r}"
+            )

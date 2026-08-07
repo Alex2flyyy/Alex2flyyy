@@ -129,6 +129,7 @@ pawparty run --count 7 --seed 20260806
 | `pawparty doctor` | Environment, config, credential and disk check |
 | `pawparty init` | Create the workspace folder tree |
 | `pawparty channels` | List channels and the size of each creative space |
+| `pawparty wire <model>` | Read a model's schema and propose its provider config |
 | `pawparty ideas -n 7` | Generate concepts only — free, no rendering |
 | `pawparty run -n 7` | The daily batch: generate + render + QC |
 | `pawparty build <id>` | Resume or re-render one video |
@@ -155,6 +156,7 @@ pawparty build disco-night-kittens-puppies-a1b2c3d4 --from-stage package
 tiktok-paw-party/
 ├── config/
 │   ├── settings.yaml              # how the machine runs
+│   ├── settings.local.yaml        # optional git-ignored overrides
 │   └── channels/
 │       ├── kittens_puppies.yaml   # the flagship channel's vocabulary
 │       └── cats_only.yaml         # a second channel, ~50 lines via `extends`
@@ -175,7 +177,7 @@ tiktok-paw-party/
 │   ├── media/                     # ffmpeg wrapper, motion, assembly, QC
 │   ├── scheduling/                # posting slot planning
 │   └── publishing/                # manual export + TikTok API client
-├── tests/                         # 152 tests, incl. real ffmpeg renders
+├── tests/                         # 179 tests, incl. real ffmpeg renders
 ├── docs/                          # architecture, providers, strategy, legal
 ├── scripts/                       # install + daily cron entry point
 └── Videos/                        # ← all output (git-ignored)
@@ -245,6 +247,11 @@ stays broad. Beat count is derived from length to keep every beat at ~5 seconds
 **`config/settings.yaml`** controls how the machine runs: render spec, which
 providers to use, budget caps, QC thresholds, posting times, subtitle styling.
 
+**`config/settings.local.yaml`** (optional, git-ignored) is deep-merged on top.
+Put machine-specific choices there — your model, your budget, your posting times
+— so pulling updates to the shared config never causes a merge conflict.
+`pawparty wire --apply` writes to it.
+
 **`config/channels/*.yaml`** controls what it makes. Every option is a small
 block:
 
@@ -304,7 +311,7 @@ Being blunt about this, because the difference matters:
 | Captions, hashtags, on-screen text | **Yes** | Nothing (LLM optional) |
 | Editing, motion, transitions, loop, mix, QC | **Yes** | ffmpeg |
 | Preview video (`synth`) | **Yes** | Nothing |
-| **Real AI animal footage** | **No** | A video model account — Replicate or fal.ai |
+| **Real AI animal footage** | **No** | A video model account — Replicate or fal.ai (`pawparty wire` does the setup) |
 | **Licensed music** | **No** | Your own tracks; see [docs/LEGAL.md](docs/LEGAL.md) |
 | LLM-written captions | No | `ANTHROPIC_API_KEY` (optional; templates work well) |
 | **Automated posting** | **No** | An *approved* TikTok developer app — see [docs/PUBLISHING.md](docs/PUBLISHING.md) |
@@ -362,7 +369,7 @@ estimates mean something. `pawparty costs` reports actual spend.
 
 ```bash
 pip install -r requirements-dev.txt
-pytest                      # 152 tests
+pytest                      # 179 tests
 pytest -m "not ffmpeg"      # skip the real-render tests
 ```
 

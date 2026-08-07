@@ -32,9 +32,70 @@ video model changes every few months, pricing changes with it, and a pinned slug
 in a repo like this rots into a broken default that fails confusingly. Instead
 the integration is generic and you point it at whatever is current.
 
-That means one extra step at setup: reading your chosen model's input schema and
-filling in the `input_map`. It takes about five minutes and it's the reason this
-still works next year.
+That normally means reading your chosen model's input schema and hand-mapping
+its field names. `pawparty wire` does that for you — see below.
+
+---
+
+## `pawparty wire` — the fast path
+
+```bash
+export REPLICATE_API_TOKEN=r8_...          # or put it in .env
+pawparty wire owner/model-name             # inspect
+pawparty wire owner/model-name --apply     # write the config
+```
+
+It fetches the model's real input schema, works out which of its fields
+correspond to PawParty's, and prints the config — flagging anything it could
+not resolve:
+
+```
+acme/dancer-v2  (replicate)
+  inputs: aspect_ratio, duration, motion_strength, negative_prompt, prompt, seed, start_image
+
+proposed config
+------------------------------------------------------------
+providers:
+  video: replicate
+  options:
+    replicate:
+      model: "acme/dancer-v2"
+      cost_per_second_usd: 0.05   # ← set from the model's pricing page
+      input_map:
+        prompt: prompt
+        negative_prompt: negative_prompt
+        duration: duration
+        seed: seed
+        first_frame: start_image
+      static_input:
+        aspect_ratio: "9:16"
+        motion_strength: "TODO"
+------------------------------------------------------------
+  note: duration only accepts [5, 10]. PawParty requests the nearest value
+        and trims to the exact beat length — trimming is free.
+  WARNING: Required input(s) with no PawParty equivalent: motion_strength.
+```
+
+It is **advisory on purpose**. It tells you what it worked out and what it
+didn't, rather than guessing confidently — a wrong `input_map` fails at
+generation time, after a batch has already started spending. Two things it
+always leaves to you:
+
+- **`cost_per_second_usd`** — it cannot read pricing. The budget guard is only
+  as accurate as this number, so set it from the model's pricing page.
+- **`TODO` placeholders** for required inputs it has no equivalent for.
+  `pawparty doctor` fails while any remain, so you can't accidentally run with
+  one.
+
+Add `--show-schema` to dump every input the model takes, and `--kind image` to
+wire an image model into the stills slot.
+
+### Where `--apply` writes
+
+`config/settings.local.yaml` — a git-ignored overlay deep-merged over
+`settings.yaml`. Machine-specific choices (your model, your budget, your posting
+times) live there, so you can pull updates to the shared config without a merge
+conflict every time. Delete the file to revert to defaults.
 
 ---
 
@@ -68,6 +129,23 @@ cat Videos/Prompts/*/*/prompts.md
 
 Paste a beat prompt in, look at the result. Five minutes here saves a lot of
 money.
+
+### A note on output resolution
+
+PawParty renders to 1080×1920, but many video models top out at 720×1280.
+That is not a blocker — the normalisation stage upscales — but upscaled
+generation is softer than native, and the platform's own re-encode is
+unforgiving of soft footage.
+
+Three options, in order of preference:
+
+1. **Use a model that outputs 1080p natively**, if one is available at a price
+   you like. Check its `resolution` or `width`/`height` inputs.
+2. **Accept the upscale.** At phone size, on bright saturated content, it is
+   less visible than you'd expect. This is a reasonable default.
+3. **Lower `render.width`/`render.height` to 720×1280.** Still 9:16, still
+   accepted everywhere, and avoids upscaling entirely. Update `qc.expect_width`
+   and `qc.expect_height` to match or QC will reject every video.
 
 ---
 

@@ -5,8 +5,9 @@ Videos/
 *.mp3
 *.m4a
 
-# Secrets
+# Secrets and machine-local config
 .env
+config/settings.local.yaml
 
 # Python
 __pycache__/

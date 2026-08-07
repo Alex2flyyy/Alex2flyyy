@@ -3,6 +3,7 @@
     pawparty doctor                     check the environment
     pawparty init                       create the workspace folders
     pawparty channels                   list channels + creative space size
+    pawparty wire <model>               propose provider config from a model schema
     pawparty ideas --count 7            concepts only, no rendering, no cost
     pawparty run --count 7              the daily batch: generate + render
     pawparty build <concept-id>         resume or re-render one video
@@ -105,6 +106,22 @@ def build_parser() -> argparse.ArgumentParser:
                          help="only post slots whose scheduled time has arrived")
     publish.add_argument("--dry-run", action="store_true")
 
+    wire = sub.add_parser(
+        "wire",
+        help="read a model's input schema and propose the provider config",
+    )
+    wire.add_argument("model", help="model slug, e.g. owner/name or owner/name:version")
+    wire.add_argument("--provider", choices=["replicate"], default="replicate")
+    wire.add_argument(
+        "--kind", choices=["video", "image"], default="video",
+        help="which provider slot this model fills",
+    )
+    wire.add_argument(
+        "--apply", action="store_true",
+        help="write the block to config/settings.local.yaml (git-ignored)",
+    )
+    wire.add_argument("--show-schema", action="store_true", help="dump every input the model takes")
+
     costs = sub.add_parser("costs", help="provider spend report")
     costs.add_argument("--days", type=int, default=14)
 
@@ -151,11 +168,26 @@ def cmd_doctor(args: argparse.Namespace, settings: Settings) -> int:
         print(f"  channel             ERROR: {exc}")
         ok = False
 
+    local_config = settings.project_root / "config" / "settings.local.yaml"
+    if local_config.exists():
+        print(f"  local overrides     {local_config.name} (applied)")
+
     print("\nproviders (configured)")
     print(f"  video               {settings.providers.video}")
     print(f"  image               {settings.providers.image}")
     print(f"  music               {settings.providers.music}")
     print(f"  llm                 {settings.providers.llm}")
+
+    # `pawparty wire` leaves TODO placeholders for required inputs it couldn't
+    # map. Left in, they fail at generation time — after a batch has started
+    # spending. Catch them here instead.
+    for provider_name, options in (settings.providers.options or {}).items():
+        for section in ("static_input", "input_map"):
+            for key, value in (options.get(section) or {}).items():
+                if str(value).strip().upper() == "TODO":
+                    print(f"  ! {provider_name}.{section}.{key} is still 'TODO' — "
+                          f"fill it in before running")
+                    ok = False
 
     print("\ncredentials")
     import os
@@ -424,6 +456,108 @@ def cmd_publish(args: argparse.Namespace, settings: Settings) -> int:
     return 0 if not failures else 2
 
 
+def cmd_wire(args: argparse.Namespace, settings: Settings) -> int:
+    """Fetch a model's schema and propose the config to run it.
+
+    Advisory by design: it prints what it worked out and what it couldn't,
+    rather than silently guessing. A wrong `input_map` fails at generation
+    time — after a batch has already started spending.
+    """
+    from .providers.base import ProviderError, ProviderUnavailable
+    from .providers.schema import fetch_replicate_schema, propose_wiring
+
+    try:
+        schema = fetch_replicate_schema(args.model)
+    except (ProviderUnavailable, ProviderError) as exc:
+        print(f"{exc}", file=sys.stderr)
+        return 1
+
+    print(f"\n{schema.slug}  ({schema.provider})")
+    if schema.description:
+        print(f"  {schema.description[:150]}")
+    print(f"  inputs: {', '.join(schema.names())}\n")
+
+    if args.show_schema:
+        for name in schema.names():
+            prop = schema.properties[name]
+            bits = [prop.get("type", "?")]
+            if prop.get("enum"):
+                bits.append(f"one of {prop['enum']}")
+            if "default" in prop:
+                bits.append(f"default={prop['default']!r}")
+            if name in schema.required:
+                bits.append("REQUIRED")
+            print(f"  {name:<22}{'  |  '.join(str(b) for b in bits)}")
+        print()
+
+    proposal = propose_wiring(schema)
+    provider_key = "replicate" if args.kind == "video" else "replicate_image"
+
+    print("proposed config")
+    print("-" * 60)
+    print(f"providers:\n  {args.kind}: {args.provider}\n  options:")
+    print(proposal.to_yaml(provider_key))
+    print("-" * 60)
+
+    if proposal.is_image_to_video:
+        print(
+            "\nThis model takes a start image, so PawParty will generate a still per\n"
+            "beat and animate it. That keeps the same kitten looking like the same\n"
+            "kitten across beats — worth the extra cent. Set providers.image too."
+        )
+    else:
+        print(
+            "\nText-to-video: each beat is generated independently, so the animal's\n"
+            "markings will drift between shots. Acceptable for short videos; use an\n"
+            "image-to-video model if that bothers you."
+        )
+
+    for note in proposal.notes:
+        print(f"  note: {note}")
+    for warning in proposal.warnings:
+        print(f"  WARNING: {warning}")
+
+    if args.apply:
+        local = settings.project_root / "config" / "settings.local.yaml"
+        existing = {}
+        if local.exists():
+            import yaml as _yaml
+
+            existing = _yaml.safe_load(local.read_text(encoding="utf-8")) or {}
+
+        providers = existing.setdefault("providers", {})
+        providers[args.kind] = args.provider
+        options = providers.setdefault("options", {})
+        options[provider_key] = {
+            "model": schema.slug,
+            "cost_per_second_usd": 0.05,
+            "timeout_s": 900,
+            "input_map": proposal.input_map,
+            **({"static_input": proposal.static_input} if proposal.static_input else {}),
+        }
+        if args.kind == "image":
+            entry = options[provider_key]
+            entry.pop("cost_per_second_usd", None)
+            entry["cost_per_image_usd"] = 0.01
+
+        import yaml as _yaml
+
+        local.write_text(
+            "# Machine-local overrides. Git-ignored. Deep-merged over settings.yaml.\n"
+            "# Written by `pawparty wire` — edit freely.\n\n"
+            + _yaml.safe_dump(existing, sort_keys=False),
+            encoding="utf-8",
+        )
+        print(f"\nwrote {local}")
+        print("  Check cost_per_second_usd against the model's pricing page — the")
+        print("  budget guard is only as accurate as that number.")
+        print("\nNext:  pawparty doctor  &&  pawparty run --count 1 -v")
+    else:
+        print("\nRe-run with --apply to write this to config/settings.local.yaml.")
+
+    return 0 if not proposal.warnings else 0
+
+
 def cmd_costs(args: argparse.Namespace, settings: Settings) -> int:
     workspace = Workspace.create(settings.workspace)
     guard = BudgetGuard(settings.budget, workspace.cost_ledger)
@@ -484,6 +618,7 @@ COMMANDS = {
     "build": cmd_build,
     "schedule": cmd_schedule,
     "publish": cmd_publish,
+    "wire": cmd_wire,
     "costs": cmd_costs,
     "stats": cmd_stats,
     "clean": cmd_clean,

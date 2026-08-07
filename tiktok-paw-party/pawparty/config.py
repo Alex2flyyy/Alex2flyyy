@@ -230,6 +230,15 @@ def load_settings(
         path = project_root / "config" / "settings.yaml"
 
     data = _read_yaml(path)
+
+    # `settings.local.yaml` is a git-ignored overlay for machine-specific
+    # choices — which model you picked, your own budget, your posting times.
+    # Keeping them out of settings.yaml means you can pull updates to the
+    # shared config without a merge conflict every time.
+    local_path = path.with_name(path.stem + ".local" + path.suffix)
+    if local_path.exists():
+        data = _deep_merge(data, _read_yaml(local_path))
+
     if overrides:
         data = _deep_merge(data, overrides)
 
