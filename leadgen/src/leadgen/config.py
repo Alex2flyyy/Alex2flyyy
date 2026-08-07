@@ -235,12 +235,17 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _production_guardrails(self) -> Settings:
-        # Failing fast at boot beats discovering at 3am that the nightly run has
-        # been writing to a database nobody configured.
+        """Checks that apply to *every* production process.
+
+        Only settings that matter regardless of what is being run belong here.
+        ``LEADGEN_API_KEY`` deliberately does not: it protects the dashboard's
+        write endpoints, and a batch pipeline run serves no HTTP at all.
+        Requiring it here made `leadgen run-daily` and even `alembic upgrade`
+        refuse to start on a correctly configured scheduled run. That check now
+        lives in the API factory, which is the only place it means anything.
+        """
         if self.env == "production":
             missing: list[str] = []
-            if not self.api_key:
-                missing.append("LEADGEN_API_KEY")
             if "localhost" in self.database_url and not os.getenv("LEADGEN_ALLOW_LOCAL_DB"):
                 missing.append("LEADGEN_DATABASE_URL (still pointing at localhost)")
             if missing:

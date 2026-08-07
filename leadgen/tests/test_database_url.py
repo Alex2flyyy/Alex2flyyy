@@ -98,3 +98,48 @@ class TestSettingsIntegration:
 
         assert settings.sync_database_url.startswith("postgresql+psycopg://")
         assert "sslmode=require" in settings.sync_database_url
+
+
+class TestProductionGuardrails:
+    """`LEADGEN_ENV=production` must not block non-HTTP work.
+
+    Requiring an API key for every production process made scheduled pipeline
+    runs and `alembic upgrade` fail on a correctly configured deployment. The
+    key guards the dashboard's write endpoints and belongs only there.
+    """
+
+    def test_batch_run_needs_no_api_key(self, monkeypatch) -> None:
+        from leadgen.config import Settings
+
+        monkeypatch.setenv("LEADGEN_ENV", "production")
+        monkeypatch.setenv("LEADGEN_DATABASE_URL", NEON)
+        monkeypatch.delenv("LEADGEN_API_KEY", raising=False)
+
+        settings = Settings()  # must not raise
+        assert settings.is_production
+        assert settings.api_key is None
+
+    def test_localhost_database_still_rejected(self, monkeypatch) -> None:
+        """The guardrail that does apply everywhere stays."""
+        import pytest
+
+        from leadgen.config import Settings
+
+        monkeypatch.setenv("LEADGEN_ENV", "production")
+        monkeypatch.setenv("LEADGEN_DATABASE_URL", LOCAL)
+        monkeypatch.delenv("LEADGEN_ALLOW_LOCAL_DB", raising=False)
+
+        with pytest.raises(ValueError, match="localhost"):
+            Settings()
+
+    def test_serving_api_in_production_requires_key(self, monkeypatch) -> None:
+        import pytest
+
+        from leadgen.api.app import create_app
+        from leadgen.config import get_settings
+
+        monkeypatch.setattr(get_settings(), "env", "production")
+        monkeypatch.setattr(get_settings(), "api_key", None)
+
+        with pytest.raises(RuntimeError, match="LEADGEN_API_KEY"):
+            create_app()

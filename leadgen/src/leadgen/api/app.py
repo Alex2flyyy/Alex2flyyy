@@ -62,6 +62,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app() -> FastAPI:
     settings = get_settings()
 
+    # Serving the API in production without a key would leave every write
+    # endpoint open. This is the only context where the key matters, so it is
+    # required here rather than in Settings — a batch pipeline run has no HTTP
+    # surface and must not be blocked by it.
+    if settings.is_production and not settings.api_key:
+        raise RuntimeError(
+            "LEADGEN_API_KEY must be set to serve the API in production; "
+            "without it every write endpoint would be unauthenticated."
+        )
+
     app = FastAPI(
         title="leadgen",
         description=DESCRIPTION,

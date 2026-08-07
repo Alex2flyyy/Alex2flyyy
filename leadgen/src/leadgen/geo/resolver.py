@@ -65,18 +65,44 @@ class LocationResolver:
     # -- radius ----------------------------------------------------------
 
     async def _resolve_radius(self, target: LocationTarget) -> list[SearchCell]:
+        components: dict[str, str] = {}
+
         if target.lat is not None and target.lng is not None:
             center = Point(target.lat, target.lng)
             label_base = f"{target.lat:.4f},{target.lng:.4f}"
-            components: dict[str, str] = {}
         else:
-            result = await self.geocoder.geocode(target.center or "")
-            if not result.found or result.point is None:
-                log.error("geo.geocode_failed", target=target.key, center=target.center)
-                return []
-            center = result.point
             label_base = target.center or target.label
-            components = result.components or {}
+
+            # Try the local gazetteer before the network. A center written as
+            # "Pasadena, CA" is almost always a place we already have exact
+            # coordinates for, and resolving it locally removes a dependency on
+            # a third-party geocoder that rate-limits aggressively and is the
+            # single most likely thing to fail on a run with no Google key.
+            place = await self._place_from_center(target.center)
+            if place is not None:
+                center = Point(float(place.lat), float(place.lng))
+                components = {
+                    "locality": place.name,
+                    "administrative_area_level_2": place.county or "",
+                    "administrative_area_level_1": place.state,
+                }
+                log.info(
+                    "geo.center_from_gazetteer", center=target.center, place=place.name
+                )
+            else:
+                result = await self.geocoder.geocode(target.center or "")
+                if not result.found or result.point is None:
+                    log.error(
+                        "geo.geocode_failed",
+                        target=target.key,
+                        center=target.center,
+                        hint="not in the gazetteer and the geocoder did not resolve it; "
+                        "run `leadgen geo seed`, set LEADGEN_GOOGLE_MAPS_API_KEY, or "
+                        "give the target explicit lat/lng",
+                    )
+                    return []
+                center = result.point
+                components = result.components or {}
 
         radius_km = miles_to_km(target.radius_miles or 10)
         cell_km = meters_to_km(target.cell_radius_m)
@@ -281,6 +307,22 @@ class LocationResolver:
                 kwargs.get("country_code", "US"), min_population=min_population, limit=limit
             )
         return list(rows)
+
+    async def _place_from_center(self, center: str | None) -> Any:
+        """Resolve a ``"City, ST"`` center string against the gazetteer.
+
+        Returns ``None`` for anything that is not a plain city/state pair — a
+        street address or landmark still needs a real geocoder.
+        """
+        if not center:
+            return None
+        parts = [p.strip() for p in center.split(",")]
+        if len(parts) != 2:
+            return None
+        city, state = parts
+        if len(state) != 2 or not state.isalpha():
+            return None
+        return await self._lookup_place(city, state.upper())
 
     async def _lookup_place(self, city: str, state: str) -> Any:
         if self.session is None or not city or not state:

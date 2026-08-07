@@ -112,6 +112,13 @@ jobs:
         if: steps.check.outputs.configured == 'true'
         run: alembic upgrade head
 
+      # Idempotent upsert, so it is safe every run. Without it the gazetteer is
+      # empty and every city, county, and radius target resolves to zero search
+      # cells — the pipeline then has nowhere to look.
+      - name: Load the gazetteer
+        if: steps.check.outputs.configured == 'true'
+        run: leadgen geo seed
+
       - name: Run the pipeline
         id: run
         if: steps.check.outputs.configured == 'true'
