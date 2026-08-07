@@ -62,6 +62,9 @@ def run_daily_cmd(
     niche: Annotated[list[str], typer.Option("--niche", "-n", help="Niche key (repeatable)")] = [],
     target: Annotated[int, typer.Option("--target", "-t", help="Qualified leads wanted")] = 0,
     cap: Annotated[int, typer.Option("--cap", help="Max businesses to discover")] = 0,
+    minutes: Annotated[
+        int, typer.Option("--minutes", help="Wall-clock budget; stop early and still report")
+    ] = 0,
     no_ai: Annotated[bool, typer.Option("--no-ai", help="Skip AI enrichment")] = False,
     no_browser: Annotated[bool, typer.Option("--no-browser", help="HTTP-only audits")] = False,
     no_pagespeed: Annotated[bool, typer.Option("--no-pagespeed", help="Skip PageSpeed")] = False,
@@ -78,6 +81,7 @@ def run_daily_cmd(
         target_leads=target or settings.daily_lead_target,
         trigger="manual",
         discovery_cap=cap or None,
+        time_budget_s=minutes * 60 or None,
         use_ai=not no_ai,
         use_browser=False if no_browser else None,
         use_pagespeed=not no_pagespeed,

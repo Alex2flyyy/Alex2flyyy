@@ -125,9 +125,14 @@ jobs:
         run: |
           NICHE_ARGS=""
           for n in ${{ github.event.inputs.niches }}; do NICHE_ARGS="$NICHE_ARGS --niche $n"; done
+          # Stay well inside the job's own timeout below. A job killed at the
+          # timeout writes no report and leaves the run marked "running"; the
+          # pipeline stopping itself at 90 minutes finishes cleanly with
+          # whatever it found.
           leadgen --json-logs run-daily \
             --location "${{ github.event.inputs.location || 'home_base_25mi' }}" \
             --target "${{ github.event.inputs.target || 50 }}" \
+            --minutes 90 \
             $NICHE_ARGS
 
       - name: Push to Airtable

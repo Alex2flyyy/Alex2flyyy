@@ -227,3 +227,42 @@ class TestConfigIntegrity:
     def test_niche_keys_are_unique(self) -> None:
         keys = get_niches().keys
         assert len(keys) == len(set(keys))
+
+
+class TestTimeBudget:
+    """A spent wall-clock budget must stop work, not abort the run.
+
+    Without this the pipeline can outlast the CI job's own timeout; the job is
+    killed mid-audit, no report is written, and the run row stays "running"
+    forever. Stopping early on purpose is strictly better.
+    """
+
+    def test_no_budget_never_stops(self) -> None:
+        from leadgen.pipeline.daily import DailyPipeline, PipelineConfig
+
+        pipeline = DailyPipeline(PipelineConfig())
+        assert pipeline._out_of_time("audit") is False
+        assert pipeline.result.errors == []
+
+    def test_expired_budget_stops_and_records_once(self) -> None:
+        import time
+
+        from leadgen.pipeline.daily import DailyPipeline, PipelineConfig
+
+        pipeline = DailyPipeline(PipelineConfig(time_budget_s=60))
+        pipeline._deadline = time.monotonic() - 1
+
+        assert pipeline._out_of_time("audit") is True
+        assert pipeline._out_of_time("audit") is True
+        # One message per stage, however many batches check it.
+        assert len(pipeline.result.errors) == 1
+        assert "time budget" in pipeline.result.errors[0]
+
+    def test_unexpired_budget_allows_work(self) -> None:
+        import time
+
+        from leadgen.pipeline.daily import DailyPipeline, PipelineConfig
+
+        pipeline = DailyPipeline(PipelineConfig(time_budget_s=60))
+        pipeline._deadline = time.monotonic() + 30
+        assert pipeline._out_of_time("discover") is False

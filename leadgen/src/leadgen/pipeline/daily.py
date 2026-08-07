@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import time
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any
@@ -91,6 +92,13 @@ class PipelineConfig:
     max_api_calls: int | None = None
     dry_run: bool = False
 
+    #: Wall-clock budget in seconds. Discovery and auditing stop cleanly at the
+    #: deadline and the run finishes as ``partial`` with whatever it has.
+    #: Without one, a large area can outlast the CI job's own timeout, and a
+    #: killed job writes no report and leaves the run row stuck at "running" —
+    #: strictly worse than stopping early on purpose. ``None`` means no limit.
+    time_budget_s: int | None = None
+
     def resolved_niches(self) -> list[Niche]:
         catalog = get_niches()
         keys = self.niche_keys or catalog.keys
@@ -107,12 +115,30 @@ class DailyPipeline:
             {"discovery": self.config.max_api_calls} if self.config.max_api_calls else {}
         )
         self._run_id: int | None = None
+        self._deadline: float | None = None
+
+    def _out_of_time(self, stage_name: str) -> bool:
+        """True once the wall-clock budget is spent.
+
+        Checked between units of work rather than enforced with a timeout, so
+        whatever has been audited is already committed and the run can still
+        score, report, and close itself out.
+        """
+        if self._deadline is None or time.monotonic() < self._deadline:
+            return False
+        message = f"{stage_name} stopped early: time budget of {self.config.time_budget_s}s spent"
+        if message not in self.result.errors:
+            self.result.errors.append(message)
+            log.warning("pipeline.time_budget_reached", stage=stage_name)
+        return True
 
     # ------------------------------------------------------------------
 
     async def run(self) -> RunResult:
         started = datetime.utcnow()
         self.result.started_at = started
+        if self.config.time_budget_s:
+            self._deadline = time.monotonic() + self.config.time_budget_s
         self.result.status = RunStatus.RUNNING
 
         location = get_locations().get(self.config.location_key)
@@ -208,6 +234,8 @@ class DailyPipeline:
         for cell in cells:
             if len(collected) >= cap:
                 log.info("discover.cap_reached", cap=cap)
+                break
+            if self._out_of_time("discover"):
                 break
             for niche in niches:
                 if len(collected) >= cap:
@@ -390,6 +418,9 @@ class DailyPipeline:
                 return business.id, audit, contact_rows
 
         for batch_ids in stages.chunk(business_ids, 50):
+            if self._out_of_time("audit"):
+                stage.skipped += len(business_ids) - stage.processed
+                break
             async with session_scope() as session:
                 repo = BusinessRepository(session)
                 businesses = [b for b in [await repo.get(i) for i in batch_ids] if b is not None]
