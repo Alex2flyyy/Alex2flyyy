@@ -238,15 +238,33 @@ class DailyPipeline:
                         continue
                     collected.append(business)
 
+        provider_stats = orchestrator.stats()
+        provider_errors = sum(info["errors"] for info in provider_stats.values())
+
+        # Finding nothing is a legitimate outcome — a thoroughly worked area
+        # really can be exhausted. Finding nothing *while every provider call
+        # errored* is not: it means discovery never happened. Reporting that as
+        # a clean run is how a silently broken pipeline survives for weeks.
+        if not collected and provider_errors:
+            usable = [p.name for p in await orchestrator.usable()]
+            message = (
+                f"discovery returned nothing and every provider request failed "
+                f"({provider_errors} errors). Remaining usable providers: "
+                f"{usable or 'none'}. Check network egress and API credentials."
+            )
+            self.result.errors.append(message)
+            log.error("discover.all_providers_failed", errors=provider_errors, usable=usable)
+
         stage.succeeded = len(collected)
         stage.notes = {
             "duplicates_in_run": deduper.duplicates_dropped,
-            "providers": orchestrator.stats(),
-            "cells_searched": min(len(cells), len(cells)),
+            "providers": provider_stats,
+            "provider_errors": provider_errors,
+            "cells_searched": len(cells),
         }
         self.result.discovered = len(collected)
         self.result.api_calls.update(
-            {name: info["api_calls"] for name, info in orchestrator.stats().items()}
+            {name: info["api_calls"] for name, info in provider_stats.items()}
         )
         self._end(stage)
 

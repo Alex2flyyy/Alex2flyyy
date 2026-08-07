@@ -86,9 +86,7 @@ class LocationResolver:
                     "administrative_area_level_2": place.county or "",
                     "administrative_area_level_1": place.state,
                 }
-                log.info(
-                    "geo.center_from_gazetteer", center=target.center, place=place.name
-                )
+                log.info("geo.center_from_gazetteer", center=target.center, place=place.name)
             else:
                 result = await self.geocoder.geocode(target.center or "")
                 if not result.found or result.point is None:

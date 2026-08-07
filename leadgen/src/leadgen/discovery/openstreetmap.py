@@ -41,11 +41,15 @@ class OpenStreetMapProvider(Provider):
     name = "osm"
     cost_per_call_usd = 0.0
     max_results_per_call = 500
+    #: Give up on the provider after this many failures in a row. Overpass
+    #: failing repeatedly means it is unreachable, not that one cell is odd.
+    MAX_CONSECUTIVE_FAILURES = 3
 
     def __init__(self, fetcher: HttpFetcher) -> None:
         super().__init__(fetcher)
         self.settings = get_settings()
         self._endpoint_index = 0
+        self._consecutive_failures = 0
 
     async def available(self) -> bool:
         return not self._quota_exhausted
@@ -108,13 +112,34 @@ class OpenStreetMapProvider(Provider):
                 continue
             if not response.ok:
                 self.errors += 1
-                log.warning("osm.request_failed", status=response.status_code, error=response.error)
+                self._consecutive_failures += 1
+                log.warning(
+                    "osm.request_failed",
+                    status=response.status_code,
+                    error=response.error,
+                    consecutive=self._consecutive_failures,
+                )
+                # A reachability problem — a blocked egress, a firewall, a dead
+                # mirror — fails identically on every cell. Without this the
+                # provider retries all of them and burns the whole discovery
+                # budget producing nothing, while the run still looks healthy.
+                if self._consecutive_failures >= self.MAX_CONSECUTIVE_FAILURES:
+                    self._mark_quota_exhausted()
+                    log.error(
+                        "osm.giving_up",
+                        failures=self._consecutive_failures,
+                        hint="Overpass is unreachable from this host; check egress "
+                        "or set LEADGEN_GOOGLE_MAPS_API_KEY to use Google Places",
+                    )
                 return None
             try:
-                return json.loads(response.text)
+                data = json.loads(response.text)
             except ValueError:
                 self.errors += 1
+                self._consecutive_failures += 1
                 return None
+            self._consecutive_failures = 0
+            return data
         self._mark_quota_exhausted()
         return None
 
