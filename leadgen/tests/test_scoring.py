@@ -265,4 +265,36 @@ class TestTimeBudget:
 
         pipeline = DailyPipeline(PipelineConfig(time_budget_s=60))
         pipeline._deadline = time.monotonic() + 30
+        # Half the budget is gone, which is past discovery's share but well
+        # inside the audit's; see TestDiscoveryBudgetShare.
+        assert pipeline._out_of_time("audit") is False
+
+
+class TestDiscoveryBudgetShare:
+    """Discovery must not eat the whole budget.
+
+    A run that discovered 166 businesses and audited none of them shipped an
+    empty CSV: the businesses were saved, but nothing was scored, so the report
+    had no rows. Discovery gets a share; the rest is reserved for the audit.
+    """
+
+    def test_discovery_stops_before_the_full_budget(self) -> None:
+        import time
+
+        from leadgen.pipeline.daily import DailyPipeline, PipelineConfig
+
+        pipeline = DailyPipeline(PipelineConfig(time_budget_s=1000))
+        # Half the budget spent: past discovery's 40% share, inside the total.
+        pipeline._deadline = time.monotonic() + 500
+
+        assert pipeline._out_of_time("discover") is True
+        assert pipeline._out_of_time("audit") is False
+
+    def test_discovery_runs_while_inside_its_share(self) -> None:
+        import time
+
+        from leadgen.pipeline.daily import DailyPipeline, PipelineConfig
+
+        pipeline = DailyPipeline(PipelineConfig(time_budget_s=1000))
+        pipeline._deadline = time.monotonic() + 900  # only 100s spent
         assert pipeline._out_of_time("discover") is False

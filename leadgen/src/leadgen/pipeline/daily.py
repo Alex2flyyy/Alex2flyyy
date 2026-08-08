@@ -69,6 +69,10 @@ from leadgen.scoring.lead_score import score_lead
 
 log = get_logger(__name__)
 
+#: Fraction of a run's wall-clock budget discovery may spend. The rest is held
+#: back for auditing, which is what turns a business into a scored lead.
+DISCOVERY_BUDGET_SHARE = 0.4
+
 
 @dataclass(slots=True)
 class PipelineConfig:
@@ -124,7 +128,17 @@ class DailyPipeline:
         whatever has been audited is already committed and the run can still
         score, report, and close itself out.
         """
-        if self._deadline is None or time.monotonic() < self._deadline:
+        deadline = self._deadline
+        if deadline is None:
+            return False
+        # Discovery is capped short of the full budget. It is the stage most
+        # able to consume everything -- a slow provider makes each call take
+        # tens of seconds -- and a run that discovers 166 businesses and audits
+        # none of them produces an empty report, which is worse than finding
+        # fewer and actually evaluating them.
+        if stage_name == "discover":
+            deadline -= (1.0 - DISCOVERY_BUDGET_SHARE) * (self.config.time_budget_s or 0)
+        if time.monotonic() < deadline:
             return False
         message = f"{stage_name} stopped early: time budget of {self.config.time_budget_s}s spent"
         if message not in self.result.errors:
@@ -239,6 +253,11 @@ class DailyPipeline:
                 break
             for niche in niches:
                 if len(collected) >= cap:
+                    break
+                # Also inside the niche loop: one cell is up to 37 provider
+                # calls, and against a throttled provider that is half an hour
+                # on its own. Checking only per cell overshot by 3x in practice.
+                if self._out_of_time("discover"):
                     break
                 if self.config.max_api_calls and self.quota.exceeded("discovery"):
                     log.warning("discover.api_budget_reached", calls=self.quota.counts["discovery"])
