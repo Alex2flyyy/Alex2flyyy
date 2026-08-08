@@ -48,6 +48,11 @@ lead_score:
     not_mobile_friendly_bonus: 7
     facebook_page_as_website_bonus: 9   # social page standing in for a site
     site_builder_free_tier_bonus: 5     # wix/weebly free subdomain
+    # The owner who never set anything up online. Phone works, but no site, no
+    # socials, no hours. Nobody has sold them a website yet, and they are the
+    # least likely to have an in-house opinion about one.
+    thin_presence_bonus: 14             # has real customers, no web presence
+    unclaimed_listing_bonus: 10         # bare listing, few reviews: less proven
     no_contact_channel_penalty: -18     # cannot reach them = cannot sell them
     chain_or_franchise_penalty: -22     # corporate controls the website
     permanently_closed_penalty: -100

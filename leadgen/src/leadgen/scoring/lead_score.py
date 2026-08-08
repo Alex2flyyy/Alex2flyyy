@@ -85,6 +85,8 @@ def score_lead(
         review_count=review_count,
         reachable_by_phone=reachable_by_phone,
         has_email=has_email,
+        social_links=getattr(business, "social_links", None) or {},
+        hours=hours,
         config=config,
     )
 
@@ -328,6 +330,8 @@ def _adjustments(
     review_count: int,
     reachable_by_phone: bool,
     has_email: bool,
+    social_links: dict[str, Any],
+    hours: dict[str, Any],
     config: Any,
 ) -> list[tuple[str, float, str]]:
     out: list[tuple[str, float, str]] = []
@@ -376,6 +380,23 @@ def _adjustments(
 
     if not reachable_by_phone and not has_email and not (audit and audit.has_contact_form):
         add("no_contact_channel_penalty", "no way to contact this business")
+
+    # The owner who never set their presence up at all: findable and callable,
+    # but no site, no social, no hours, barely any reviews. Nobody has sold
+    # them anything digital yet, which is exactly why they are worth a call.
+    # Gated on having a phone -- an unreachable business is not a lead however
+    # thin its listing is, and that case is already penalised above.
+    if reachable_by_phone and not website and not social_links and not hours:
+        if review_count < config.lead_score.activity.reviews_floor:
+            add(
+                "unclaimed_listing_bonus",
+                "listing is bare -- no site, socials, or hours -- and looks unmanaged",
+            )
+        else:
+            add(
+                "thin_presence_bonus",
+                "real customers but no website, socials, or hours online",
+            )
 
     if rating is not None and rating >= 4.5 and review_count >= 50:
         add("high_rating_many_reviews_bonus", "thriving business that can afford a redesign")

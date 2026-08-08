@@ -298,3 +298,76 @@ class TestDiscoveryBudgetShare:
         pipeline = DailyPipeline(PipelineConfig(time_budget_s=1000))
         pipeline._deadline = time.monotonic() + 900  # only 100s spent
         assert pipeline._out_of_time("discover") is False
+
+
+class TestThinPresence:
+    """The non-tech-savvy owner: callable, but nothing set up online.
+
+    These are the best prospects for a web designer -- no incumbent agency, no
+    in-house opinion, and an obvious gap to point at. But the bonus must not
+    fire for a business nobody can reach, which is a dead end however bare its
+    listing looks.
+    """
+
+    def _business(self, **overrides):
+        from leadgen.domain import RawBusiness
+
+        defaults = {
+            "source": "osm",
+            "source_id": "x1",
+            "name": "Valley Builders",
+            "phone": "(626) 555-0199",
+            "website": None,
+            "city": "Pasadena",
+            "state": "CA",
+            "review_count": 12,
+            "rating": 4.4,
+        }
+        defaults.update(overrides)
+        return RawBusiness(**defaults)
+
+    def _keys(self, result):
+        return {key for key, _, _ in result.adjustments}
+
+    def test_established_but_no_web_presence_gets_bonus(self) -> None:
+        from leadgen.scoring.lead_score import score_lead
+
+        result = score_lead(self._business(), None, None)
+        assert "thin_presence_bonus" in self._keys(result)
+
+    def test_bare_listing_gets_the_unclaimed_variant(self) -> None:
+        from leadgen.scoring.lead_score import score_lead
+
+        result = score_lead(self._business(review_count=1), None, None)
+        keys = self._keys(result)
+        assert "unclaimed_listing_bonus" in keys
+        assert "thin_presence_bonus" not in keys
+
+    def test_unreachable_business_gets_no_bonus(self) -> None:
+        from leadgen.scoring.lead_score import score_lead
+
+        result = score_lead(self._business(phone=None), None, None)
+        keys = self._keys(result)
+        assert "thin_presence_bonus" not in keys
+        assert "unclaimed_listing_bonus" not in keys
+        assert "no_contact_channel_penalty" in keys
+
+    def test_business_with_a_website_gets_no_bonus(self) -> None:
+        from leadgen.scoring.lead_score import score_lead
+
+        result = score_lead(self._business(website="http://valleybuilders.example"), None, None)
+        assert "thin_presence_bonus" not in self._keys(result)
+
+    def test_business_with_hours_listed_is_not_thin(self) -> None:
+        """Hours mean somebody has been maintaining the listing."""
+        from leadgen.scoring.lead_score import score_lead
+
+        result = score_lead(self._business(hours={"mon": "8-5"}), None, None)
+        assert "thin_presence_bonus" not in self._keys(result)
+
+    def test_thin_presence_outranks_an_equivalent_managed_listing(self) -> None:
+        from leadgen.scoring.lead_score import score_lead
+
+        thin = score_lead(self._business(), None, None)
+        managed = score_lead(self._business(hours={"mon": "8-5"}), None, None)
+        assert thin.score > managed.score
