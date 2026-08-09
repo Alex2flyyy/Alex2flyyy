@@ -189,6 +189,28 @@ def cmd_doctor(args: argparse.Namespace, settings: Settings) -> int:
                           f"fill it in before running")
                     ok = False
 
+    # Sanity-check the budget against what a full day would actually cost. A
+    # cap below the batch cost isn't a safety net, it's a batch that stops
+    # half way through with a confusing error.
+    per_second = 0.0
+    for key in ("replicate", "fal"):
+        opts = (settings.providers.options or {}).get(key) or {}
+        if settings.providers.video == key:
+            per_second = float(opts.get("cost_per_second_usd", 0.0))
+    if per_second > 0:
+        # ~31 clips/day at 7 videos/day, and models bill in 5s blocks.
+        clips_per_day = int(settings.schedule.videos_per_day * 4.4)
+        estimated = clips_per_day * 5 * per_second
+        print(f"\nbudget")
+        print(f"  daily cap           ${settings.budget.daily_usd:.2f}")
+        print(f"  estimated daily     ${estimated:.2f}  "
+              f"(~{clips_per_day} clips x 5s x ${per_second}/s)")
+        if estimated > settings.budget.daily_usd:
+            print(f"  ! the cap is below a full day's cost — the batch will stop early.")
+            print(f"    Raise budget.daily_usd to ~${estimated * 1.2:.0f}, or lower")
+            print(f"    schedule.videos_per_day to {max(1, int(settings.budget.daily_usd / (estimated / settings.schedule.videos_per_day)))}.")
+            ok = False
+
     print("\ncredentials")
     import os
 
