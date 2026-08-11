@@ -21,9 +21,9 @@ on:
         required: false
         default: "home_base_25mi"
       niches:
-        description: "Space-separated niche keys, or blank for all"
+        description: "Space-separated niche keys, or 'all' for every niche"
         required: false
-        default: ""
+        default: "construction roofing flooring painting window_installers"
       target:
         description: "Qualified leads wanted"
         required: false
@@ -49,6 +49,9 @@ jobs:
     timeout-minutes: 120
 
     env:
+      # What the 6:15am run searches. Change this one line to retarget the
+      # daily job; `all` searches every niche in config/niches.yml.
+      DEFAULT_NICHES: "construction roofing flooring painting window_installers"
       LEADGEN_ENV: production
       LEADGEN_LOG_FORMAT: json
       LEADGEN_DATABASE_URL: ${{ secrets.LEADGEN_DATABASE_URL }}
@@ -127,8 +130,14 @@ jobs:
         id: run
         if: steps.check.outputs.configured == 'true'
         run: |
+          # The scheduled run sends no inputs at all, so the dispatch default
+          # above does not apply to it — spell the same list out here or the
+          # 6:15am run silently searches all 37 niches instead.
+          NICHES="${{ github.event.inputs.niches || env.DEFAULT_NICHES }}"
           NICHE_ARGS=""
-          for n in ${{ github.event.inputs.niches }}; do NICHE_ARGS="$NICHE_ARGS --niche $n"; done
+          if [ "$NICHES" != "all" ]; then
+            for n in $NICHES; do NICHE_ARGS="$NICHE_ARGS --niche $n"; done
+          fi
           # Stay well inside the job's own timeout below. A job killed at the
           # timeout writes no report and leaves the run marked "running"; the
           # pipeline stopping itself at 90 minutes finishes cleanly with

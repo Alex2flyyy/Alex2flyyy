@@ -1,0 +1,61 @@
+name: Mark a lead
+
+# Record what happened after you called someone, without needing a terminal.
+# Anything other than "new" drops the business out of tomorrow's list, and
+# "do_not_contact" also suppresses its phone and email permanently.
+
+on:
+  workflow_dispatch:
+    inputs:
+      search:
+        description: "Business name or phone (partial is fine)"
+        required: true
+      status:
+        description: "What happened"
+        required: true
+        default: "contacted"
+        type: choice
+        options:
+          - contacted
+          - responded
+          - meeting_booked
+          - proposal_sent
+          - won
+          - lost
+          - do_not_contact
+          - new
+      note:
+        description: "Note for your own reference (optional)"
+        required: false
+        default: ""
+
+defaults:
+  run:
+    working-directory: leadgen
+
+jobs:
+  mark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      LEADGEN_ENV: production
+      LEADGEN_DATABASE_URL: ${{ secrets.LEADGEN_DATABASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: leadgen/pyproject.toml
+
+      - name: Install
+        run: pip install -e .
+
+      - name: Mark the lead
+        run: |
+          leadgen mark "${{ github.event.inputs.search }}" \
+            --status "${{ github.event.inputs.status }}" \
+            --note "${{ github.event.inputs.note }}"

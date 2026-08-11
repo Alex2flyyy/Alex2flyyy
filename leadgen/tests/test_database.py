@@ -358,6 +358,75 @@ class TestLeads:
         assert len(await repo.due_follow_ups()) == 1
 
 
+class TestCalledLeadsStopReappearing:
+    """A business you already phoned must not come back tomorrow.
+
+    This is the whole point of recording an outcome. If the daily list keeps
+    surfacing someone who already said no, the operator stops trusting it and
+    starts keeping their own spreadsheet, at which point the system is dead.
+    """
+
+    async def _lead(self, session, raw_business, name: str, score: int):
+        # source_key is what the upsert matches on, and business_values has
+        # already derived it from the fixture by the time these overrides
+        # apply. Overriding source_id alone leaves both rows sharing a key, so
+        # the second upsert returns the first business and the test quietly
+        # asserts nothing. Override the key itself.
+        business = await _make_business(
+            session,
+            raw_business,
+            name=name,
+            source_key=f"test:{name}",
+            dedupe_key=name.lower().replace(" ", "-"),
+            phone_e164=f"+1626555{score:04d}",
+            street_address=f"{score} Test Street",
+        )
+        lead, _ = await LeadRepository(session).upsert_score(
+            business_id=business.id,
+            score=score,
+            website_status=WebsiteStatus.POOR,
+            website_score=20.0,
+            qualified=True,
+            reason="bad site",
+            components=[],
+            adjustments=[],
+        )
+        return lead
+
+    async def test_contacted_lead_drops_out_of_the_daily_list(self, session, raw_business) -> None:
+        from datetime import date, timedelta
+
+        repo = LeadRepository(session)
+        called = await self._lead(session, raw_business, "Called Roofing", 90)
+        fresh = await self._lead(session, raw_business, "Untouched Roofing", 80)
+        await session.flush()
+
+        tomorrow = date.today() + timedelta(days=1)
+        before = {lead.id for lead in await repo.top_for_date(tomorrow, limit=10)}
+        assert {called.id, fresh.id} <= before
+
+        await repo.update_status(called.id, LeadStatus.CONTACTED)
+        await session.flush()
+
+        after = {lead.id for lead in await repo.top_for_date(tomorrow, limit=10)}
+        assert called.id not in after
+        # The higher-scoring lead leaving must not take the rest with it.
+        assert fresh.id in after
+
+    async def test_do_not_contact_also_drops_out(self, session, raw_business) -> None:
+        from datetime import date, timedelta
+
+        repo = LeadRepository(session)
+        refused = await self._lead(session, raw_business, "Refused Painting", 95)
+        await session.flush()
+
+        await repo.update_status(refused.id, LeadStatus.DO_NOT_CONTACT)
+        await session.flush()
+
+        tomorrow = date.today() + timedelta(days=1)
+        assert refused.id not in {lead.id for lead in await repo.top_for_date(tomorrow, limit=10)}
+
+
 class TestContactsAndSuppression:
     async def test_contacts_deduplicate(self, session, raw_business) -> None:
         business = await _make_business(session, raw_business)

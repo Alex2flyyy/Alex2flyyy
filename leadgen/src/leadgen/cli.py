@@ -560,6 +560,70 @@ def serve(
 
 
 @app.command()
+def mark(
+    search: Annotated[str, typer.Argument(help="Business name or phone, partial is fine")],
+    status: Annotated[
+        str, typer.Option("--status", "-s", help="contacted | lost | won | do_not_contact | new")
+    ] = "contacted",
+    note: Annotated[str, typer.Option("--note", "-n", help="Why, for your own reference")] = "",
+) -> None:
+    """Record the outcome of an outreach attempt.
+
+    Marking a lead anything other than ``new`` or ``qualified`` drops it out of
+    the daily list, so a business you have already called stops reappearing.
+    ``do_not_contact`` additionally adds its phone and email to the suppression
+    list, which excludes it permanently even if it is rediscovered later.
+    """
+    from leadgen.db.repositories import ContactRepository, LeadRepository, SuppressionRepository
+    from leadgen.db.session import session_scope
+    from leadgen.domain import LeadStatus
+
+    try:
+        lead_status = LeadStatus(status.lower().replace("-", "_"))
+    except ValueError:
+        console.print(f"[red]Unknown status[/] {status!r}. Valid: {[s.value for s in LeadStatus]}")
+        raise typer.Exit(1) from None
+
+    async def go() -> int:
+        async with session_scope() as session:
+            repo = LeadRepository(session)
+            matches = list(await repo.search(query=search, limit=25))
+            if not matches:
+                console.print(f"[yellow]No lead matches[/] {search!r}")
+                return 1
+            if len(matches) > 1:
+                # Never guess between businesses: marking the wrong one both
+                # buries a live lead and keeps calling someone who declined.
+                console.print(f"[yellow]{len(matches)} leads match[/] {search!r}:")
+                for lead in matches:
+                    console.print(
+                        f"  {lead.business.name} — {lead.business.phone or 'no phone'}"
+                        f" — {lead.business.city or ''}"
+                    )
+                console.print("Narrow the search so it matches exactly one.")
+                return 1
+
+            lead = matches[0]
+            await repo.update_status(lead.id, lead_status, notes=note or None)
+
+            if lead_status == LeadStatus.DO_NOT_CONTACT:
+                suppress_repo = SuppressionRepository(session)
+                reason = note or "asked not to be contacted"
+                if lead.business.phone_e164:
+                    await suppress_repo.add("phone", lead.business.phone_e164, reason)
+                if lead.business.email:
+                    await suppress_repo.add("email", lead.business.email.lower(), reason)
+                for contact in await ContactRepository(session).for_business(lead.business_id):
+                    if contact.kind in {"email", "phone"}:
+                        await suppress_repo.add(contact.kind, contact.value.lower(), reason)
+
+            console.print(f"[green]{lead.business.name}[/] → {lead_status.value}")
+            return 0
+
+    raise typer.Exit(asyncio.run(go()))
+
+
+@app.command()
 def suppress(
     value: Annotated[str, typer.Argument(help="Email, phone, domain, or business name")],
     kind: Annotated[str, typer.Option(help="email | phone | domain | business")] = "email",
