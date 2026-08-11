@@ -238,10 +238,17 @@ class GooglePlacesProvider(Provider):
 
         if response.status_code in (401, 403):
             self.errors += 1
+            # Google names the actual cause in the body, and the four causes
+            # need four different fixes: API_KEY_SERVICE_BLOCKED (the key's API
+            # restriction list), SERVICE_DISABLED (Places not enabled on the
+            # project), API_KEY_HTTP_REFERRER_BLOCKED (application restriction
+            # set to a website), or a billing problem. Guessing between them
+            # from the status alone costs a full run per attempt, so report
+            # what Google said verbatim.
+            detail = " ".join((response.text or "").split())[:400]
             raise QuotaExceeded(
                 f"Google Places rejected the request ({response.status_code}). "
-                "Check that the key is valid, that Places API (New) is enabled, "
-                "and that any key restrictions permit this API."
+                f"Google said: {detail or '(empty response body)'}"
             )
         if response.status_code == 429:
             self._mark_quota_exhausted()
