@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       search:
-        description: "Business name or phone (partial is fine)"
+        description: "Business name or phone. Several at once: separate with ;"
         required: true
       status:
         description: "What happened"

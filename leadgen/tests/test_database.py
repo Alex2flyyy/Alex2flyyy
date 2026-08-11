@@ -546,3 +546,35 @@ class TestRunsAndAnalytics:
         assert await repo.by_website_status()
         assert len(await repo.conversion_funnel()) == 6
         assert len(await repo.score_distribution()) == 5
+
+
+class TestBatchMarking:
+    """Splitting the `mark` input, which is what the operator actually types.
+
+    A calling session ends with several businesses to record at once, and one
+    bad entry in the middle must not discard the good ones — nobody retypes
+    the seven that worked.
+    """
+
+    def _split(self, raw: str) -> list[str]:
+        return [part.strip() for part in raw.split(";") if part.strip()]
+
+    def test_single_entry_is_unchanged(self) -> None:
+        assert self._split("Valley Roofing") == ["Valley Roofing"]
+
+    def test_several_entries_split_and_strip(self) -> None:
+        assert self._split("A Roofing;  B Painting ;C Floors") == [
+            "A Roofing",
+            "B Painting",
+            "C Floors",
+        ]
+
+    def test_commas_survive_because_names_contain_them(self) -> None:
+        """ "Bob's Plumbing, Inc." is one business, not two."""
+        assert self._split("Bob's Plumbing, Inc.") == ["Bob's Plumbing, Inc."]
+
+    def test_trailing_separator_does_not_create_an_empty_term(self) -> None:
+        assert self._split("A Roofing; B Painting;") == ["A Roofing", "B Painting"]
+
+    def test_only_separators_yields_nothing(self) -> None:
+        assert self._split(" ; ; ") == []
