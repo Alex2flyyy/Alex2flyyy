@@ -578,3 +578,63 @@ class TestBatchMarking:
 
     def test_only_separators_yields_nothing(self) -> None:
         assert self._split(" ; ; ") == []
+
+
+class TestMarkTopSelection:
+    """Which pile `--top N` draws from.
+
+    Marking works through open leads; undoing has to work through the closed
+    ones. Drawing from the open pile in both directions makes the undo a silent
+    no-op, which is how it shipped the first time.
+    """
+
+    async def _lead(self, session, raw_business, name: str, score: int):
+        business = await _make_business(
+            session,
+            raw_business,
+            name=name,
+            source_key=f"top:{name}",
+            dedupe_key=name.lower().replace(" ", "-"),
+            phone_e164=f"+1626777{score:04d}",
+            street_address=f"{score} Top Street",
+        )
+        lead, _ = await LeadRepository(session).upsert_score(
+            business_id=business.id,
+            score=score,
+            website_status=WebsiteStatus.POOR,
+            website_score=20.0,
+            qualified=True,
+            reason="bad site",
+            components=[],
+            adjustments=[],
+        )
+        return lead
+
+    OPEN = [LeadStatus.NEW, LeadStatus.QUALIFIED]
+
+    async def test_top_takes_the_highest_scoring_open_leads(self, session, raw_business) -> None:
+        repo = LeadRepository(session)
+        best = await self._lead(session, raw_business, "Best Roofing", 96)
+        middle = await self._lead(session, raw_business, "Middle Roofing", 84)
+        await self._lead(session, raw_business, "Worst Roofing", 61)
+        await session.flush()
+
+        picked = await repo.search(
+            qualified_only=True, statuses=self.OPEN, order_by="score", limit=2
+        )
+        assert [lead.id for lead in picked] == [best.id, middle.id]
+
+    async def test_undo_draws_from_the_closed_pile(self, session, raw_business) -> None:
+        repo = LeadRepository(session)
+        called = await self._lead(session, raw_business, "Called Roofing", 90)
+        untouched = await self._lead(session, raw_business, "Untouched Roofing", 88)
+        await repo.update_status(called.id, LeadStatus.CONTACTED)
+        await session.flush()
+
+        closed = [s for s in LeadStatus if s not in self.OPEN]
+        restorable = await repo.search(statuses=closed, order_by="score", limit=40)
+        ids = [lead.id for lead in restorable]
+
+        assert called.id in ids
+        # Undoing must not reset a lead the operator never marked.
+        assert untouched.id not in ids

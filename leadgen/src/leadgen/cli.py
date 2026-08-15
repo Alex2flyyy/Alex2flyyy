@@ -564,7 +564,11 @@ def mark(
     search: Annotated[
         str,
         typer.Argument(help="Business name or phone. Separate several with ';'"),
-    ],
+    ] = "",
+    top: Annotated[
+        int,
+        typer.Option("--top", help="Instead of names: the N highest-scoring open leads"),
+    ] = 0,
     status: Annotated[
         str, typer.Option("--status", "-s", help="contacted | lost | won | do_not_contact | new")
     ] = "contacted",
@@ -581,6 +585,11 @@ def mark(
     which is the shape of a real calling session: eight numbers dialled, nobody
     picked up, all eight are ``contacted``. Commas are not a separator because
     business names contain them ("Bob's Plumbing, Inc.").
+
+    ``--top N`` covers the other shape: worked down the printed list as far as
+    row N. It takes the N highest-scoring leads that are still open, which is
+    the order the report prints them in, and names every one it marks so the
+    result can be checked against the sheet.
     """
     from leadgen.db.repositories import ContactRepository, LeadRepository, SuppressionRepository
     from leadgen.db.session import session_scope
@@ -593,9 +602,33 @@ def mark(
         raise typer.Exit(1) from None
 
     terms = [part.strip() for part in search.split(";") if part.strip()]
-    if not terms:
-        console.print("[red]Nothing to mark[/] — give a business name or phone.")
+    if bool(terms) == bool(top):
+        console.print(
+            "[red]Give either names or --top N[/], not both and not neither.\n"
+            '  leadgen mark "Valley Roofing; Cortez Painting" --status contacted\n'
+            "  leadgen mark --top 40 --status contacted"
+        )
         raise typer.Exit(1)
+    if top < 0:
+        console.print("[red]--top must be positive.[/]")
+        raise typer.Exit(1)
+
+    async def apply(session, lead) -> None:
+        repo = LeadRepository(session)
+        await repo.update_status(lead.id, lead_status, notes=note or None)
+
+        if lead_status == LeadStatus.DO_NOT_CONTACT:
+            suppress_repo = SuppressionRepository(session)
+            reason = note or "asked not to be contacted"
+            if lead.business.phone_e164:
+                await suppress_repo.add("phone", lead.business.phone_e164, reason)
+            if lead.business.email:
+                await suppress_repo.add("email", lead.business.email.lower(), reason)
+            for contact in await ContactRepository(session).for_business(lead.business_id):
+                if contact.kind in {"email", "phone"}:
+                    await suppress_repo.add(contact.kind, contact.value.lower(), reason)
+
+        console.print(f"[green]{lead.business.name}[/] → {lead_status.value}")
 
     async def mark_one(session, term: str) -> bool:
         repo = LeadRepository(session)
@@ -614,33 +647,58 @@ def mark(
                 )
             return False
 
-        lead = matches[0]
-        await repo.update_status(lead.id, lead_status, notes=note or None)
-
-        if lead_status == LeadStatus.DO_NOT_CONTACT:
-            suppress_repo = SuppressionRepository(session)
-            reason = note or "asked not to be contacted"
-            if lead.business.phone_e164:
-                await suppress_repo.add("phone", lead.business.phone_e164, reason)
-            if lead.business.email:
-                await suppress_repo.add("email", lead.business.email.lower(), reason)
-            for contact in await ContactRepository(session).for_business(lead.business_id):
-                if contact.kind in {"email", "phone"}:
-                    await suppress_repo.add(contact.kind, contact.value.lower(), reason)
-
-        console.print(f"[green]{lead.business.name}[/] → {lead_status.value}")
+        await apply(session, matches[0])
         return True
+
+    OPEN = [LeadStatus.NEW, LeadStatus.QUALIFIED]
+
+    async def mark_top(session) -> tuple[int, int]:
+        repo = LeadRepository(session)
+        # Which pile to draw from depends on the direction. Setting anything
+        # but `new` works through the open leads, highest score first, which is
+        # the order the report prints — so "I got to row 40" and "--top 40"
+        # name the same businesses. Setting `new` is the undo, and the leads
+        # to restore are precisely the ones no longer open; drawing from the
+        # open pile would make the undo a no-op.
+        undoing = lead_status == LeadStatus.NEW
+        statuses = [s for s in LeadStatus if s not in OPEN] if undoing else OPEN
+        noun = "already-marked" if undoing else "open"
+
+        leads = list(
+            await repo.search(
+                qualified_only=not undoing,
+                statuses=statuses,
+                order_by="score",
+                limit=top,
+            )
+        )
+        if not leads:
+            console.print(f"[yellow]No {noun} leads found.[/]")
+            return 0, 0
+        if len(leads) < top:
+            plural = "lead is" if len(leads) == 1 else "leads are"
+            console.print(f"[yellow]Only {len(leads)} {plural} {noun}[/] — marking those.\n")
+        for lead in leads:
+            await apply(session, lead)
+        return len(leads), len(leads)
 
     async def go() -> int:
         async with session_scope() as session:
-            # One entry failing must not discard the rest: after a calling
-            # session the operator is not going to retype the eight that worked.
-            results = [await mark_one(session, term) for term in terms]
+            if top:
+                marked, attempted = await mark_top(session)
+            else:
+                # One entry failing must not discard the rest: after a calling
+                # session nobody retypes the eight that worked.
+                results = [await mark_one(session, term) for term in terms]
+                marked, attempted = sum(results), len(terms)
 
-        marked = sum(results)
-        if len(terms) > 1:
-            console.print(f"\n[bold]{marked} of {len(terms)} marked[/] as {lead_status.value}")
-        return 0 if marked == len(terms) else 1
+        if attempted > 1:
+            console.print(f"\n[bold]{marked} of {attempted} marked[/] as {lead_status.value}")
+            if lead_status != LeadStatus.NEW:
+                console.print("[dim]Undo with: leadgen mark --top N --status new[/]")
+        # `attempted`, not len(terms): --top leaves terms empty, and comparing
+        # against it would fail every successful --top run.
+        return 0 if marked == attempted and marked else 1
 
     raise typer.Exit(asyncio.run(go()))
 

@@ -9,7 +9,12 @@ on:
     inputs:
       search:
         description: "Business name or phone. Several at once: separate with ;"
-        required: true
+        required: false
+        default: ""
+      top:
+        description: "Or: how far down the list you got (e.g. 40). Leave blank if using names"
+        required: false
+        default: ""
       status:
         description: "What happened"
         required: true
@@ -56,6 +61,14 @@ jobs:
 
       - name: Mark the lead
         run: |
-          leadgen mark "${{ github.event.inputs.search }}" \
-            --status "${{ github.event.inputs.status }}" \
-            --note "${{ github.event.inputs.note }}"
+          # Exactly one of the two must reach the CLI, which rejects both and
+          # neither. Quoting an empty --top would pass "0" and look deliberate.
+          if [ -n "${{ github.event.inputs.top }}" ]; then
+            leadgen mark --top "${{ github.event.inputs.top }}" \
+              --status "${{ github.event.inputs.status }}" \
+              --note "${{ github.event.inputs.note }}"
+          else
+            leadgen mark "${{ github.event.inputs.search }}" \
+              --status "${{ github.event.inputs.status }}" \
+              --note "${{ github.event.inputs.note }}"
+          fi
