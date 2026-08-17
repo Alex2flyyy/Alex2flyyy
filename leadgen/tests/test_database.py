@@ -710,3 +710,86 @@ class TestFollowUps:
         tomorrow = date.today() + timedelta(days=1)
         assert keen.id not in {lead.id for lead in await repo.top_for_date(tomorrow, limit=50)}
         assert keen.id in {lead.id for lead in await repo.due_follow_ups()}
+
+
+class TestAuditFieldLengths:
+    """The failure that cost a whole day's leads.
+
+    ``design_era`` is a sentence assembled by the parser, not a code. It grew
+    past the 40-character column ("pre-2012 (not responsive), copyright 2011"
+    is 41), Postgres refused the INSERT, and because every business in the
+    batch shared one transaction the rejection took the entire audit stage down
+    with it. The run ended with 0 audited, no report, and no CSV.
+    """
+
+    LONG_ERA = "pre-2012 (not responsive), copyright 2011"
+
+    async def test_the_real_value_that_broke_production_fits(
+        self, session, raw_business, bad_audit
+    ) -> None:
+        from leadgen.pipeline.stages import save_audit
+
+        assert len(self.LONG_ERA) > 40, "if this shrinks, the test stops testing anything"
+        business = await _make_business(session, raw_business)
+        bad_audit.design_era = self.LONG_ERA
+
+        record = await save_audit(session, business, bad_audit, None)
+        await session.flush()
+
+        assert record.design_era == self.LONG_ERA
+
+    async def test_absurd_values_are_clipped_rather_than_raising(
+        self, session, raw_business, bad_audit
+    ) -> None:
+        """Scraped text has no length contract, so the column can't be trusted alone."""
+        from leadgen.pipeline.stages import save_audit
+
+        business = await _make_business(session, raw_business)
+        bad_audit.design_era = "x" * 500
+        bad_audit.tech_stack = ["y" * 300]
+
+        record = await save_audit(session, business, bad_audit, None)
+        await session.flush()
+
+        assert len(record.design_era) == 120
+        assert len(record.tech_stack[0]) == 80
+
+
+class TestOneBadRowCannotSinkTheBatch:
+    """A savepoint per business, so a rejected row costs one business, not all."""
+
+    async def test_savepoint_isolates_a_failing_insert(
+        self, session, raw_business, bad_audit
+    ) -> None:
+        from sqlalchemy.exc import DBAPIError
+
+        from leadgen.pipeline.stages import save_audit
+
+        good = await _make_business(session, raw_business, source_key="test:good")
+        doomed = await _make_business(
+            session,
+            raw_business,
+            name="Doomed Co",
+            source_key="test:doomed",
+            dedupe_key="doomed-co",
+            phone_e164="+16265550199",
+            street_address="9 Doomed Street",
+        )
+
+        try:
+            async with session.begin_nested():
+                # A value no defensive truncation covers: the enum column has a
+                # fixed set of members, so this is rejected by the database the
+                # same way an over-length string was.
+                await session.execute(
+                    WebsiteAuditRecord.__table__.insert().values(
+                        business_id=doomed.id, url="http://x", status="not_a_real_status"
+                    )
+                )
+        except (DBAPIError, Exception):
+            pass
+
+        # The session must still be usable — that is the whole point.
+        record = await save_audit(session, good, bad_audit, None)
+        await session.flush()
+        assert record.id is not None

@@ -114,7 +114,13 @@ async def save_audit(
     audit: WebsiteAudit,
     run_id: int | None,
 ) -> WebsiteAuditRecord:
-    """Persist an audit and record a status transition if one occurred."""
+    """Persist an audit and record a status transition if one occurred.
+
+    Text coming off a scraped page has no length contract, so every bounded
+    column is clipped to its declared width here. Losing the tail of a label is
+    invisible; letting Postgres reject the row aborts the surrounding
+    transaction and takes the rest of the batch with it.
+    """
     audit_repo = AuditRepository(session)
     previous = await audit_repo.latest_for_business(business.id)
 
@@ -154,8 +160,8 @@ async def save_audit(
         has_cta=audit.has_cta,
         broken_link_count=audit.broken_link_count,
         images_missing_alt=audit.images_missing_alt,
-        tech_stack=audit.tech_stack[:20],
-        design_era=audit.design_era,
+        tech_stack=[t[:80] for t in audit.tech_stack[:20]],
+        design_era=audit.design_era[:120] if audit.design_era else None,
         screenshot_path=audit.screenshot_path,
         screenshot_mobile_path=audit.screenshot_mobile_path,
         dimension_scores=audit.dimension_scores,

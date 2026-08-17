@@ -226,7 +226,10 @@ class WebsiteAuditRecord(Base, TimestampMixin):
     images_missing_alt: Mapped[int] = mapped_column(Integer, default=0)
 
     tech_stack: Mapped[list[str]] = mapped_column(ARRAY(String(80)), default=list)
-    design_era: Mapped[str | None] = mapped_column(String(40))
+    # Not a code — a sentence shown to the operator and used verbatim in the
+    # pitch. It accretes clauses ("pre-2012 (not responsive), copyright 2011"
+    # is already 41), so it needs room to grow.
+    design_era: Mapped[str | None] = mapped_column(String(120))
     screenshot_path: Mapped[str | None] = mapped_column(Text)
     screenshot_mobile_path: Mapped[str | None] = mapped_column(Text)
 

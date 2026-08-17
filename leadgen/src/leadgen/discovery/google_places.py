@@ -104,6 +104,11 @@ class GooglePlacesProvider(Provider):
         super().__init__(fetcher)
         self.settings = get_settings()
         self.api_key = self.settings.google_maps_api_key
+        # Types Google rejected during this run. Google's supported list is not
+        # versioned with our config and does change, so rather than trust the
+        # catalog we learn from the first rejection and stop resending the type
+        # for the remaining cells.
+        self._rejected_types: set[str] = set()
 
     async def available(self) -> bool:
         return bool(self.api_key) and not self._quota_exhausted
@@ -122,8 +127,9 @@ class GooglePlacesProvider(Provider):
         results: list[RawBusiness] = []
         seen_ids: set[str] = set()
 
-        if niche.place_types:
-            nearby = await self._search_nearby(cell, niche, limit=min(limit, 20))
+        usable_types = [t for t in niche.place_types if t not in self._rejected_types]
+        if usable_types:
+            nearby = await self._search_nearby(cell, usable_types, limit=min(limit, 20))
             for business in nearby:
                 if business.source_id not in seen_ids:
                     seen_ids.add(business.source_id)
@@ -132,7 +138,12 @@ class GooglePlacesProvider(Provider):
         # Text search fills the gap for niches Google has no type for
         # ("pressure washing"), and tops up when a nearby search came back
         # full, which means we almost certainly missed businesses.
-        needs_text = not niche.place_types or len(results) >= self.max_results_per_call
+        #
+        # An empty result counts as a gap too. Before, a niche that declared a
+        # type never reached the keywords, so one type Google no longer accepts
+        # -- `general_contractor` -- meant construction returned nothing at all,
+        # every cell, every day, while the run still reported success.
+        needs_text = not results or len(results) >= self.max_results_per_call
         if needs_text and len(results) < limit:
             for keyword in niche.keywords[:2]:
                 if len(results) >= limit:
@@ -150,10 +161,10 @@ class GooglePlacesProvider(Provider):
         return results[:limit]
 
     async def _search_nearby(
-        self, cell: SearchCell, niche: Niche, *, limit: int
+        self, cell: SearchCell, place_types: list[str], *, limit: int
     ) -> list[RawBusiness]:
         payload = {
-            "includedTypes": niche.place_types,
+            "includedTypes": place_types,
             "maxResultCount": min(limit, 20),
             "locationRestriction": {
                 "circle": {
@@ -255,6 +266,8 @@ class GooglePlacesProvider(Provider):
             raise QuotaExceeded("Google Places rate limit / quota exceeded")
         if not response.ok:
             self.errors += 1
+            if response.status_code == 400:
+                self._remember_rejected_types(response.text)
             log.warning(
                 "google_places.request_failed",
                 status=response.status_code,
@@ -268,6 +281,30 @@ class GooglePlacesProvider(Provider):
         except ValueError:
             self.errors += 1
             return {}
+
+    def _remember_rejected_types(self, body: str) -> None:
+        """Pull the type names out of `Unsupported types: a, b` and blacklist them.
+
+        Logged at error level: the niche silently falls back to keyword search,
+        which finds fewer businesses, so the catalog entry needs a human fix.
+        """
+        try:
+            message = (json.loads(body or "{}").get("error") or {}).get("message") or ""
+        except ValueError:
+            return
+        marker = "Unsupported types:"
+        if marker not in message:
+            return
+        names = message.split(marker, 1)[1].strip().rstrip(".")
+        new = {n.strip() for n in names.split(",") if n.strip()} - self._rejected_types
+        if not new:
+            return
+        self._rejected_types |= new
+        log.error(
+            "google_places.unsupported_types",
+            types=sorted(new),
+            hint="remove from config/niches.yml; falling back to keyword search",
+        )
 
     def _parse(self, place: dict[str, Any], cell: SearchCell) -> RawBusiness:
         components = _parse_components(place.get("addressComponents", []))

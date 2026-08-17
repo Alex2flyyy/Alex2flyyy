@@ -174,7 +174,11 @@ niches:
 
   - key: construction
     label: Construction
-    place_types: [general_contractor]
+    # Places API (New) has no contractor type -- `general_contractor` is a
+    # legacy-API name and is rejected. Keywords carry this niche, which suits
+    # it: contractors work out of trucks, so the ones worth calling are often
+    # the ones with the thinnest listings.
+    place_types: []
     keywords: ["general contractor", "construction company", "home remodeling"]
     osm_tags: ["craft=builder", "office=construction_company"]
     demand: 0.8
@@ -324,7 +328,8 @@ niches:
 
   - key: flooring
     label: Flooring Companies
-    place_types: [flooring_store]
+    # `flooring_store` is likewise not a Places API (New) type.
+    place_types: []
     keywords: ["flooring company", "hardwood flooring", "carpet installation"]
     osm_tags: ["shop=flooring"]
     demand: 0.8

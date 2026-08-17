@@ -456,25 +456,51 @@ class DailyPipeline:
                         continue
                     business_id, audit, contact_rows = outcome
                     stage.processed += 1
-                    audits[business_id] = audit
 
                     business = await repo.get(business_id)
                     if business is None:
                         continue
-                    if audit is not None:
-                        await stages.save_audit(session, business, audit, self._run_id)
-                        stage.succeeded += 1
-                        if audit.emails and not business.email:
-                            business.email = audit.emails[0][:320]
-                        if audit.social_links:
-                            business.social_links = {
-                                **(business.social_links or {}),
-                                **audit.social_links,
-                            }
-                    else:
+                    if audit is None and not contact_rows:
                         stage.skipped += 1
-                    if contact_rows:
-                        await stages.save_contacts(session, business_id, contact_rows)
+                        continue
+
+                    # Each business writes inside its own savepoint. A row the
+                    # database refuses -- an over-length field, a constraint
+                    # nobody anticipated -- otherwise poisons the surrounding
+                    # transaction and costs every other business in the batch,
+                    # and with it the whole run's report.
+                    try:
+                        async with session.begin_nested():
+                            if audit is not None:
+                                await stages.save_audit(
+                                    session, business, audit, self._run_id
+                                )
+                                if audit.emails and not business.email:
+                                    business.email = audit.emails[0][:320]
+                                if audit.social_links:
+                                    business.social_links = {
+                                        **(business.social_links or {}),
+                                        **audit.social_links,
+                                    }
+                            if contact_rows:
+                                await stages.save_contacts(
+                                    session, business_id, contact_rows
+                                )
+                    except Exception as exc:
+                        stage.failed += 1
+                        log.warning(
+                            "audit.save_failed",
+                            business=business.name,
+                            business_id=business_id,
+                            error=str(exc)[:300],
+                        )
+                        continue
+
+                    if audit is None:
+                        stage.skipped += 1
+                    else:
+                        audits[business_id] = audit
+                        stage.succeeded += 1
 
             log.info("audit.batch", done=stage.processed, total=len(business_ids))
 
