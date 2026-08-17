@@ -11,7 +11,7 @@ import asyncio
 import csv
 import json
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -573,6 +573,10 @@ def mark(
         str, typer.Option("--status", "-s", help="contacted | lost | won | do_not_contact | new")
     ] = "contacted",
     note: Annotated[str, typer.Option("--note", "-n", help="Why, for your own reference")] = "",
+    follow_up: Annotated[
+        int,
+        typer.Option("--follow-up", help="Remind me in N days; shows at the top of the report"),
+    ] = 0,
 ) -> None:
     """Record the outcome of one or more outreach attempts.
 
@@ -615,7 +619,11 @@ def mark(
 
     async def apply(session, lead) -> None:
         repo = LeadRepository(session)
-        await repo.update_status(lead.id, lead_status, notes=note or None)
+        # An interested lead that leaves the daily list with no reminder is
+        # worse than one never marked: the operator loses their best prospect
+        # and does not notice. A follow-up date puts it back in front of them.
+        due = datetime.utcnow() + timedelta(days=follow_up) if follow_up else None
+        await repo.update_status(lead.id, lead_status, notes=note or None, follow_up_at=due)
 
         if lead_status == LeadStatus.DO_NOT_CONTACT:
             suppress_repo = SuppressionRepository(session)
@@ -628,7 +636,8 @@ def mark(
                 if contact.kind in {"email", "phone"}:
                     await suppress_repo.add(contact.kind, contact.value.lower(), reason)
 
-        console.print(f"[green]{lead.business.name}[/] → {lead_status.value}")
+        suffix = f" · follow up in {follow_up}d" if follow_up else ""
+        console.print(f"[green]{lead.business.name}[/] → {lead_status.value}{suffix}")
 
     async def mark_one(session, term: str) -> bool:
         repo = LeadRepository(session)

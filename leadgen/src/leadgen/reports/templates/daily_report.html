@@ -31,6 +31,20 @@
   .card .l { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
   .summary { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--accent);
              border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; }
+  /* Callbacks sit above the prospect list and use the warm accent, not the
+     blue one, so the eye lands on them before the cold-call table. */
+  .followups { background: var(--card); border: 1px solid var(--line);
+               border-left: 3px solid var(--warm); border-radius: 8px;
+               padding: 14px 18px; margin-bottom: 20px; }
+  .followups h2 { margin: 0 0 4px; font-size: 15px; color: var(--warm); }
+  .followups > p { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
+  .followups ul { margin: 0; padding: 0; list-style: none;
+                  display: flex; flex-direction: column; gap: 8px; }
+  .followups li { padding-top: 8px; border-top: 1px solid var(--line); font-size: 14px; }
+  .followups li:first-child { padding-top: 0; border-top: none; }
+  .fu-phone { font-variant-numeric: tabular-nums; margin-left: 10px; }
+  .fu-meta { color: var(--muted); font-size: 12.5px; margin-left: 10px; }
+  .fu-note { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
   .scroll { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
   table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
   th { text-align: left; padding: 10px 12px; background: var(--bg); border-bottom: 1px solid var(--line);
@@ -76,6 +90,26 @@
   <div class="card"><div class="n">{{ stats.overview.total_leads }}</div><div class="l">Total leads</div></div>
   <div class="card"><div class="n">{{ stats.overview.pending }}</div><div class="l">Awaiting contact</div></div>
 </div>
+
+{% if stats.follow_ups %}
+<div class="followups">
+  <h2>Call these back today</h2>
+  <p>You asked to be reminded about {{ stats.follow_ups | length }}
+    {{ 'business' if stats.follow_ups | length == 1 else 'businesses' }}.
+    They are not in the list below — you have already spoken to them.</p>
+  <ul>
+    {% for f in stats.follow_ups %}
+    <li>
+      <strong>{{ f.name }}</strong>
+      {% if f.phone %}<span class="fu-phone">{{ f.phone }}</span>{% endif %}
+      {% if f.city %}<span class="fu-meta">{{ f.city }}</span>{% endif %}
+      <span class="fu-meta">{{ f.status }}</span>
+      {% if f.notes %}<div class="fu-note">{{ f.notes }}</div>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
 
 <div class="summary">{{ stats.overview.new_today }} new businesses discovered today.
   {{ no_website_count }} of the {{ lead_count }} prospects below have no website at all.</div>

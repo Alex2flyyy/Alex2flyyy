@@ -172,6 +172,22 @@ async def collect_report_rows(
             "by_website_status": await analytics.by_website_status(),
         }
 
+        # Someone who asked to be called back is the most valuable name in the
+        # database and the easiest to lose: recording the outcome removes them
+        # from the prospect list, so without this they exist only in the
+        # operator's memory. Carried at the top of the report.
+        stats["follow_ups"] = [
+            {
+                "name": lead.business.name,
+                "phone": lead.business.phone or "",
+                "city": lead.business.city or "",
+                "status": lead.status.value if hasattr(lead.status, "value") else str(lead.status),
+                "notes": lead.notes or "",
+                "due": lead.follow_up_at.date().isoformat() if lead.follow_up_at else "",
+            }
+            for lead in await lead_repo.due_follow_ups()
+        ]
+
     rows = [lead_to_row(lead, rank=i + 1) for i, lead in enumerate(full_leads)]
     rows = filter_suppressed(rows, suppressions)
     for index, row in enumerate(rows):

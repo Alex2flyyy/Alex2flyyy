@@ -638,3 +638,75 @@ class TestMarkTopSelection:
         assert called.id in ids
         # Undoing must not reset a lead the operator never marked.
         assert untouched.id not in ids
+
+
+class TestFollowUps:
+    """A callback must survive being recorded.
+
+    Marking an interested lead removes it from the prospect list, so without a
+    reminder the best name in the database exists only in the operator's head.
+    """
+
+    async def _lead(self, session, raw_business, name: str, score: int):
+        business = await _make_business(
+            session,
+            raw_business,
+            name=name,
+            source_key=f"fu:{name}",
+            dedupe_key=name.lower().replace(" ", "-"),
+            phone_e164=f"+1626888{score:04d}",
+            street_address=f"{score} Callback Road",
+        )
+        lead, _ = await LeadRepository(session).upsert_score(
+            business_id=business.id,
+            score=score,
+            website_status=WebsiteStatus.POOR,
+            website_score=20.0,
+            qualified=True,
+            reason="bad site",
+            components=[],
+            adjustments=[],
+        )
+        return lead
+
+    async def test_due_callback_surfaces(self, session, raw_business) -> None:
+        repo = LeadRepository(session)
+        keen = await self._lead(session, raw_business, "Keen Roofing", 91)
+        await repo.update_status(
+            keen.id,
+            LeadStatus.RESPONDED,
+            follow_up_at=datetime.utcnow() - timedelta(hours=1),
+        )
+        await session.flush()
+
+        assert keen.id in {lead.id for lead in await repo.due_follow_ups()}
+
+    async def test_future_callback_stays_quiet(self, session, raw_business) -> None:
+        """A reminder for next week must not shout today."""
+        repo = LeadRepository(session)
+        later = await self._lead(session, raw_business, "Later Roofing", 89)
+        await repo.update_status(
+            later.id,
+            LeadStatus.RESPONDED,
+            follow_up_at=datetime.utcnow() + timedelta(days=7),
+        )
+        await session.flush()
+
+        assert later.id not in {lead.id for lead in await repo.due_follow_ups()}
+
+    async def test_callback_is_off_the_prospect_list(self, session, raw_business) -> None:
+        """Both things must be true at once: reminded, and not cold-called again."""
+        from datetime import date
+
+        repo = LeadRepository(session)
+        keen = await self._lead(session, raw_business, "Keen Windows", 93)
+        await repo.update_status(
+            keen.id,
+            LeadStatus.RESPONDED,
+            follow_up_at=datetime.utcnow() - timedelta(hours=1),
+        )
+        await session.flush()
+
+        tomorrow = date.today() + timedelta(days=1)
+        assert keen.id not in {lead.id for lead in await repo.top_for_date(tomorrow, limit=50)}
+        assert keen.id in {lead.id for lead in await repo.due_follow_ups()}
