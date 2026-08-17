@@ -33,6 +33,10 @@ on:
         description: "Note for your own reference (optional)"
         required: false
         default: ""
+      follow_up:
+        description: "Remind me to call back in this many days (e.g. 3). Blank = no reminder"
+        required: false
+        default: ""
 
 defaults:
   run:
@@ -61,14 +65,20 @@ jobs:
 
       - name: Mark the lead
         run: |
+          # An empty --follow-up would pass "0", which the CLI reads as "no
+          # reminder" anyway, but leaving the flag off keeps the log honest.
+          FOLLOW_UP=""
+          if [ -n "${{ github.event.inputs.follow_up }}" ]; then
+            FOLLOW_UP="--follow-up ${{ github.event.inputs.follow_up }}"
+          fi
           # Exactly one of the two must reach the CLI, which rejects both and
           # neither. Quoting an empty --top would pass "0" and look deliberate.
           if [ -n "${{ github.event.inputs.top }}" ]; then
             leadgen mark --top "${{ github.event.inputs.top }}" \
               --status "${{ github.event.inputs.status }}" \
-              --note "${{ github.event.inputs.note }}"
+              --note "${{ github.event.inputs.note }}" $FOLLOW_UP
           else
             leadgen mark "${{ github.event.inputs.search }}" \
               --status "${{ github.event.inputs.status }}" \
-              --note "${{ github.event.inputs.note }}"
+              --note "${{ github.event.inputs.note }}" $FOLLOW_UP
           fi
