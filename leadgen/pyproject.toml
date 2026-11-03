@@ -20,7 +20,12 @@ dependencies = [
     # --- HTTP / scraping ---
     "httpx[http2]>=0.27",
     "tenacity>=8.3",
-    "selectolax>=0.3.21",
+    # selectolax 1.0 dropped the "Modest" backend this code uses (import
+    # raises instead of parsing) and there is no deprecation period to lean
+    # on -- 0.3.21 had no upper bound here, so pip silently installed 1.0.2
+    # and the pipeline couldn't import at all. Pinned below the break; the
+    # October outage is the lesson, not a judgment call.
+    "selectolax>=0.3.21,<1.0",
     "playwright>=1.45",
     "tldextract>=5.1",
 
