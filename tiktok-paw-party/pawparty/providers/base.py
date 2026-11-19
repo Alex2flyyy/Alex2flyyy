@@ -46,6 +46,15 @@ class VideoProvider(Protocol):
 
     name: str
 
+    def billed_seconds(self, duration_s: float) -> float:
+        """Seconds this provider actually charges for a clip of this length.
+
+        Most video models accept only a few discrete durations and bill the
+        whole block, so a 1.6-second request costs the same as a 5-second one.
+        The preflight estimator needs that granularity to be honest — summing
+        requested seconds understates a real bill by well over half.
+        """
+
     def estimate_cost(self, duration_s: float) -> float:
         """USD estimate for one clip of this length. Used by the budget guard."""
 
@@ -125,6 +134,13 @@ class BaseProvider:
 
     def __init__(self, options: dict[str, Any] | None = None) -> None:
         self.options = dict(options or {})
+
+    def billed_seconds(self, duration_s: float) -> float:
+        """Default: billed per second actually requested.
+
+        Providers that bill in discrete blocks override this.
+        """
+        return max(0.0, float(duration_s))
 
     def opt(self, key: str, default: Any = None) -> Any:
         return self.options.get(key, default)

@@ -347,8 +347,16 @@ class MyModelProvider(BaseProvider):
         if not self.key:
             raise ProviderUnavailable("MYMODEL_API_KEY is not set.")
 
+    def billed_seconds(self, duration_s: float) -> float:
+        """What the provider CHARGES for, which is rarely what you asked for.
+
+        Most models bill a discrete block, so a 1.6s beat costs a full 5s.
+        Omit this and the default (requested seconds) understates real bills.
+        """
+        return 5.0 if duration_s <= 5 else 10.0
+
     def estimate_cost(self, duration_s: float) -> float:
-        return 0.04 * duration_s
+        return 0.04 * self.billed_seconds(duration_s)
 
     def generate_clip(self, *, prompt, negative_prompt, duration_s, width, height,
                       fps, output, seed, first_frame=None) -> GenerationResult:
@@ -374,7 +382,9 @@ unattended operation from one that doesn't:
 
 - Raise `ProviderUnavailable` (not `ProviderError`) for missing configuration, so
   the registry degrades instead of failing the batch.
-- Make `estimate_cost()` honest. It's what the budget guard acts on.
+- Make `estimate_cost()` and `billed_seconds()` honest. The budget guard and
+  the preflight estimate both act on them, and a block-billing model costed
+  per requested second will understate your bill by more than half.
 - Never leave a partial file at `output` on failure. Download to a temp path and
   rename, as `providers/http.download` does — the pipeline treats an existing
   output file as completed work.

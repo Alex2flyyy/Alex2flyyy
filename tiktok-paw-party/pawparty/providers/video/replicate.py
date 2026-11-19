@@ -63,8 +63,12 @@ class ReplicateVideoProvider(BaseProvider):
         self.timeout_s = int(self.opt("timeout_s", 900))
 
     # ------------------------------------------------------------------ #
+    def billed_seconds(self, duration_s: float) -> float:
+        """Replicate bills the whole requested block, not the trimmed result."""
+        return float(self._round_duration(duration_s))
+
     def estimate_cost(self, duration_s: float) -> float:
-        return round(self.cost_per_second * max(1.0, duration_s), 4)
+        return round(self.cost_per_second * self.billed_seconds(duration_s), 4)
 
     def _check(self) -> None:
         if not self.token:
@@ -168,6 +172,7 @@ class ReplicateVideoProvider(BaseProvider):
 
         We ask for the nearest supported value and let the assembly stage trim
         to the exact beat duration — trimming is free, re-generating is not.
+        This is also the billed block, so :meth:`billed_seconds` reuses it.
         """
         for allowed in (5, 6, 8, 10):
             if duration_s <= allowed:

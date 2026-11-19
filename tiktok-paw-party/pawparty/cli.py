@@ -82,6 +82,10 @@ def build_parser() -> argparse.ArgumentParser:
         choices=[s.value for s in Stage],
         help="stop each job after this stage (e.g. clips) — useful for dry runs",
     )
+    run.add_argument(
+        "--estimate-only", action="store_true",
+        help="print the predicted cost and stop, before any provider is called",
+    )
     run.add_argument("--schedule", action="store_true", help="also plan posting slots")
     run.add_argument("--export", action="store_true", help="also write the upload bundle")
 
@@ -189,27 +193,46 @@ def cmd_doctor(args: argparse.Namespace, settings: Settings) -> int:
                           f"fill it in before running")
                     ok = False
 
-    # Sanity-check the budget against what a full day would actually cost. A
-    # cap below the batch cost isn't a safety net, it's a batch that stops
-    # half way through with a confusing error.
-    per_second = 0.0
-    for key in ("replicate", "fal"):
-        opts = (settings.providers.options or {}).get(key) or {}
-        if settings.providers.video == key:
-            per_second = float(opts.get("cost_per_second_usd", 0.0))
-    if per_second > 0:
-        # ~31 clips/day at 7 videos/day, and models bill in 5s blocks.
-        clips_per_day = int(settings.schedule.videos_per_day * 4.4)
-        estimated = clips_per_day * 5 * per_second
-        print(f"\nbudget")
-        print(f"  daily cap           ${settings.budget.daily_usd:.2f}")
-        print(f"  estimated daily     ${estimated:.2f}  "
-              f"(~{clips_per_day} clips x 5s x ${per_second}/s)")
-        if estimated > settings.budget.daily_usd:
-            print(f"  ! the cap is below a full day's cost — the batch will stop early.")
-            print(f"    Raise budget.daily_usd to ~${estimated * 1.2:.0f}, or lower")
-            print(f"    schedule.videos_per_day to {max(1, int(settings.budget.daily_usd / (estimated / settings.schedule.videos_per_day)))}.")
-            ok = False
+    # Sanity-check the budget against what a full day would actually cost.
+    # This uses the same estimator the preflight uses, on a real sample batch,
+    # so doctor and `run` can never quote different numbers.
+    if settings.providers.video != "synth":
+        try:
+            from .costing import estimate_batch
+            from .providers.registry import build_providers
+
+            sample_workspace = Workspace.create(settings.workspace)
+            bundle = build_providers(settings, sample_workspace)
+            sample_generator = ConceptGenerator(
+                settings, load_channel(settings, args.channel)
+            )
+            sample = [
+                sample_generator.generate_one(seed=i)
+                for i in range(settings.schedule.videos_per_day)
+            ]
+            estimate = estimate_batch(sample, bundle, settings)
+
+            print("\nbudget (estimated from a sample batch)")
+            for line in estimate.report_lines():
+                print(line)
+            print(f"  daily cap             ${settings.budget.daily_usd:.2f}")
+            print(f"  per-video cap         ${settings.budget.per_video_usd:.2f}")
+
+            if estimate.total_usd > settings.budget.daily_usd:
+                fits = max(1, int(settings.schedule.videos_per_day
+                                  * settings.budget.daily_usd / estimate.total_usd))
+                print("  ! the daily cap is below a full day's cost — the batch will "
+                      "stop early.")
+                print(f"    Raise budget.daily_usd to about ${estimate.total_usd * 1.2:.0f}, "
+                      f"or lower schedule.videos_per_day to {fits}.")
+                ok = False
+            if estimate.per_video_usd > settings.budget.per_video_usd:
+                print(f"  ! the per-video cap (${settings.budget.per_video_usd:.2f}) is "
+                      f"below the ${estimate.per_video_usd:.2f} a video costs — every "
+                      f"video will fail.")
+                ok = False
+        except Exception as exc:  # a broken estimate must not break doctor
+            print(f"\nbudget              could not estimate: {exc}")
 
     print("\ncredentials")
     import os
@@ -340,7 +363,18 @@ def cmd_run(args: argparse.Namespace, settings: Settings) -> int:
         force_occasion=args.occasion,
         concurrency=args.concurrency,
         stop_after=Stage(args.stop_after) if args.stop_after else None,
+        estimate_only=args.estimate_only,
     )
+
+    # The predicted cost, printed before any paid generation happened.
+    if result.estimate:
+        print("\npredicted cost (before generation)")
+        for line in result.estimate.report_lines():
+            print(line)
+
+    if args.estimate_only:
+        print("\nNothing was generated. Drop --estimate-only to build.")
+        return 0
 
     print(f"\n{result.summary()}")
     for job in result.succeeded:

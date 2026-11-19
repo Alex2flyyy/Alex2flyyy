@@ -57,8 +57,14 @@ class FalVideoProvider(BaseProvider):
         self.static_input = dict(self.opt("static_input") or {})
         self.timeout_s = int(self.opt("timeout_s", 900))
 
+    def billed_seconds(self, duration_s: float) -> float:
+        """fal models take integer seconds and bill the whole second."""
+        import math
+
+        return float(max(1, math.ceil(duration_s)))
+
     def estimate_cost(self, duration_s: float) -> float:
-        return round(self.cost_per_second * max(1.0, duration_s), 4)
+        return round(self.cost_per_second * self.billed_seconds(duration_s), 4)
 
     @property
     def _headers(self) -> dict[str, str]:

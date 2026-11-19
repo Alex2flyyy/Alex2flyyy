@@ -142,6 +142,12 @@ pawparty run --count 7 --seed 20260806
 Useful flags: `--channel <name>`, `--seed <n>`, `--date YYYY-MM-DD`,
 `-j/--concurrency <n>`, `--occasion halloween`, `--stop-after clips`, `-v`.
 
+To see what a batch would cost without generating anything:
+
+```bash
+pawparty run --count 7 --estimate-only
+```
+
 Re-rendering just the final encode of one video:
 
 ```bash
@@ -345,10 +351,24 @@ budget:
   abort_on_exceed: true
 ```
 
-Video generation dominates; captions cost fractions of a cent. At 7 videos a day
-of 4–6 beats each, expect roughly 30–40 clip generations daily — check your
-chosen model's per-second price and set `cost_per_second_usd` to match so the
-estimates mean something. `pawparty costs` reports actual spend.
+`pawparty run --estimate-only` prints the predicted cost before any provider is
+called, and every run logs the same figure before it starts generating. The
+estimate accounts for **billing granularity** — models charge for discrete
+blocks, so a 1.6-second beat costs the same as a 5-second one, and summing
+requested seconds understates a real bill by well over half.
+
+Video generation dominates; captions cost fractions of a cent. At 7 videos a
+day, measured over a 30-day simulated batch at $0.05/s on Replicate's block
+pricing: 745 clip requests, 4,919 billed seconds, ~$253/month. Set
+`cost_per_second_usd` from your model's pricing page or the estimates mean
+nothing. `pawparty costs` reports actual spend.
+
+**Loop-beat reuse** (`reuse_loop_clip`, on by default) cuts the final loop beat
+from the opening of beat one instead of requesting it. Over that same 30-day
+batch it removes 116 of 861 clip requests (13.5%) and 580 billed seconds,
+saving ~$30/month — and makes the loop seam measurably tighter, since the
+closing frames *are* the opening frames. See
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 

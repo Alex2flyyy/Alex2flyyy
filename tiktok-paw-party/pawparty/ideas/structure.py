@@ -243,6 +243,38 @@ def build_beats(
     return beats
 
 
+def mark_derivable_loop(beats: list[Beat], *, enabled: bool = True) -> list[Beat]:
+    """Flag the loop beat as derivable from beat one, where that's safe.
+
+    Decided here, at concept time, rather than during rendering, for one
+    reason: the preflight cost estimate has to know the real request count
+    *before* anything is billed, and a concept is the only thing that exists
+    at that point.
+
+    Conditions, all of them necessary:
+
+    * reuse is enabled in config;
+    * there are at least two beats (a two-beat video ends on ``payoff_loop``,
+      which carries the punchline and must be its own footage);
+    * the final beat's role is ``loop``;
+    * the loop is no longer than beat one, or there would be nothing to take.
+
+    Rendering re-checks against the actual clip and falls back to generating if
+    the source turns out unusable, so this flag is an intention, not a promise.
+    """
+    if not enabled or len(beats) < 2:
+        return beats
+
+    last = beats[-1]
+    if last.role != "loop":
+        return beats
+    if last.duration_s > beats[0].duration_s:
+        return beats
+
+    last.derived_from = beats[0].slug
+    return beats
+
+
 def total_from_band(rng: random.Random, band: DurationBand) -> float:
     """A jittered length inside the band, rounded to the nearest 0.5s."""
     raw = rng.uniform(band.min_s, band.max_s)

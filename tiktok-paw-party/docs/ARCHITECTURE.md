@@ -214,6 +214,37 @@ Because transitions consume time from both sides, the finished video is slightly
 shorter than the sum of its beats. That's expected, and it's why QC uses a
 tolerance and why subtitle timings are rescaled against the measured duration.
 
+### Loop-beat derivation (`media/loop.py`)
+
+The final `loop` beat exists only to rhyme with frame one. Generating it
+separately was the worst trade in the pipeline: a separately billed request,
+charged as a full block (so a 1.6-second beat costs the same as a 5-second
+one), for footage generated *independently* of the beat it is supposed to
+match — so the animal's markings and costume drifted away from the opening.
+
+It is now cut from the opening of beat one instead. The loop becomes exact
+rather than approximate, the identity question disappears (it is the same
+footage), and it costs nothing.
+
+The decision is made at **concept** time, not render time, for one reason: the
+preflight estimate has to know the true request count before anything is
+billed, and a concept is all that exists at that point. `Beat.derived_from`
+carries it, so it serialises into the manifest and is auditable afterwards.
+
+Three conditions, all necessary:
+
+* reuse enabled (`reuse_loop_clip`);
+* the final beat's role is `loop` — a 2-3 beat video ends on `payoff_loop`,
+  which carries the punchline and must be its own footage;
+* the loop is no longer than beat one.
+
+Rendering re-checks against the actual clip (exists, decodable, long enough)
+and falls back to generating if it is unusable, logging loudly because that
+costs an unbudgeted request. The trim re-encodes rather than stream-copying: a
+stream copy starts at the nearest preceding keyframe, which would silently
+shift the loop by up to a keyframe interval — the one thing this beat cannot
+tolerate.
+
 ### Loop closing
 
 Rewatches are the cheapest views on the platform. Three strategies:
@@ -239,6 +270,7 @@ video costs more than skipping the slot.
 | Per-job exception isolation | `pipeline._safe_build` | One broken video killing the batch |
 | Retry with backoff | `util.retry` | Transient provider failures |
 | Provider fallback | `providers/registry.py` | A missing key producing nothing |
+| Preflight estimate | `costing.py` | Discovering the cost at video four instead of video zero |
 | Budget guard | `budget.py` | A runaway loop and a surprise invoice |
 | QC gate | `media/qc.py` | Publishing something broken |
 | Atomic JSON writes | `util.write_json` | A reader seeing half a manifest |

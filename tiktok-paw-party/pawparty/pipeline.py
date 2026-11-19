@@ -31,7 +31,9 @@ from .copywriting.onscreen import build_subtitle_lines
 from .ideas.concept import ConceptGenerator
 from .ideas.novelty import NoveltyLedger
 from .logging_setup import get_logger
+from .costing import CostEstimate, estimate_batch
 from .media import assemble, ffmpeg, qc, subtitles
+from .media import loop as media_loop
 from .models import Beat, Concept, CopyPack, JobRecord, JobStatus, Stage
 from .prompts.renderer import PromptRenderer
 from .providers.base import ProviderError
@@ -50,6 +52,8 @@ class BatchResult:
     failed: list[JobRecord] = field(default_factory=list)
     total_cost_usd: float = 0.0
     degraded_providers: list[str] = field(default_factory=list)
+    #: What the preflight predicted before anything was generated.
+    estimate: CostEstimate | None = None
 
     @property
     def counts(self) -> tuple[int, int]:
@@ -103,8 +107,13 @@ class Pipeline:
         force_occasion: str | None = None,
         concurrency: int | None = None,
         stop_after: Stage | None = None,
+        estimate_only: bool = False,
     ) -> BatchResult:
-        """Generate and build a day's worth of videos."""
+        """Generate and build a day's worth of videos.
+
+        ``estimate_only`` stops after the preflight cost report, before any
+        provider is called — the safe way to see what a batch would cost.
+        """
         count = count or self.settings.schedule.videos_per_day
         date = date or _dt.date.today()
         stamp = today_stamp(date)
@@ -135,6 +144,31 @@ class Pipeline:
             channel=self.channel.name,
             degraded_providers=list(self.providers.degraded),
         )
+
+        # Preflight: cost the whole batch before a single provider call. The
+        # per-call budget guard only ever refuses one request at a time, which
+        # is how a batch ends up halting at video four. This says up front what
+        # the night will cost and whether it fits.
+        estimate = estimate_batch(concepts, self.providers, self.settings)
+        result.estimate = estimate
+        log.info("preflight: %s", estimate.summary())
+        for line in estimate.report_lines():
+            log.info("%s", line)
+
+        if not estimate.is_free:
+            remaining = self.budget.remaining_today(date)
+            if estimate.total_usd > remaining:
+                log.warning(
+                    "preflight cost $%.2f exceeds the $%.2f left in today's budget "
+                    "($%.2f cap) — the batch will stop part way. Lower --count to "
+                    "about %d, or raise budget.daily_usd.",
+                    estimate.total_usd, remaining, self.settings.budget.daily_usd,
+                    max(1, int(count * remaining / estimate.total_usd)),
+                )
+
+        if estimate_only:
+            log.info("stopping after the preflight estimate as requested")
+            return result
 
         if workers == 1:
             jobs = [self._safe_build(c, date, stop_after) for c in concepts]
@@ -281,6 +315,14 @@ class Pipeline:
         cost = 0.0
 
         for beat in concept.beats:
+            # A derived beat is never sent to a provider, so it needs no still.
+            # Generating one anyway is a silent per-video charge for an image
+            # nothing consumes.
+            if beat.is_derived:
+                log.debug("skipping still for derived beat %s", beat.slug,
+                          extra={"concept": concept.id})
+                continue
+
             target = out_dir / f"{beat.slug}.png"
             if target.exists() and target.stat().st_size > 0:
                 paths.append(str(target))
@@ -313,7 +355,13 @@ class Pipeline:
         job.finish_stage(Stage.STILLS, detail=f"{len(paths)} stills", artifacts=paths, cost_usd=cost)
 
     def _stage_clips(self, job: JobRecord) -> None:
-        """Generate the raw video for each beat."""
+        """Generate the raw video for each beat.
+
+        Beats flagged ``derived_from`` are cut locally from the beat they point
+        at rather than requested from the provider — no cost, and an exact
+        match. If the source turns out unusable, we fall back to generating,
+        because one extra request beats a missing video.
+        """
         concept = job.concept
         out_dir = self.workspace.job_dir(self.workspace.generated, concept.id, job.date)
         raw_dir = out_dir / "raw"
@@ -321,14 +369,44 @@ class Pipeline:
 
         paths: list[str] = []
         cost = 0.0
+        derived = 0
         stills = {Path(p).stem: Path(p) for p in job.still_paths}
+        #: beat slug -> raw clip, so a derived beat can find its source.
+        produced: dict[str, Path] = {}
 
         for beat in concept.beats:
             target = raw_dir / f"{beat.slug}.mp4"
             if target.exists() and target.stat().st_size > 0:
                 log.debug("reusing existing clip %s", target.name, extra={"concept": concept.id})
                 paths.append(str(target))
+                produced[beat.slug] = target
                 continue
+
+            if beat.is_derived:
+                source = produced.get(beat.derived_from)
+                check = media_loop.can_derive(source, beat.duration_s)
+                if check:
+                    media_loop.derive_loop_clip(
+                        source, beat.duration_s, target, self.settings.render  # type: ignore[arg-type]
+                    )
+                    derived += 1
+                    paths.append(str(target))
+                    produced[beat.slug] = target
+                    log.info(
+                        "derived %s from %s (%.2fs, no provider request)",
+                        beat.slug, beat.derived_from, beat.duration_s,
+                        extra={"concept": concept.id},
+                    )
+                    continue
+                # Falling back costs a request we had not budgeted, so say so
+                # loudly rather than letting the bill drift quietly.
+                log.warning(
+                    "cannot derive %s from %s (%s) — generating it instead, "
+                    "which costs one unbudgeted request",
+                    beat.slug, beat.derived_from, check.reason,
+                    extra={"concept": concept.id},
+                )
+                beat.derived_from = ""
 
             estimate = float(self.providers.video.estimate_cost(beat.duration_s))
             self.budget.check(estimate, concept_id=concept.id, date=job.date)
@@ -357,12 +435,14 @@ class Pipeline:
                                stage="clips", provider=result.provider, date=job.date)
             cost += result.cost_usd
             paths.append(str(result.path))
+            produced[beat.slug] = Path(result.path)
             log.debug("clip %s ready (%.1fs)", beat.slug, beat.duration_s,
                       extra={"concept": concept.id})
 
         job.clip_paths = paths
-        job.finish_stage(Stage.CLIPS, detail=f"{len(paths)} clips",
-                         artifacts=paths, cost_usd=cost)
+        requested = len(paths) - derived
+        detail = f"{len(paths)} clips ({requested} generated, {derived} derived locally)"
+        job.finish_stage(Stage.CLIPS, detail=detail, artifacts=paths, cost_usd=cost)
 
     def _stage_motion(self, job: JobRecord) -> None:
         """Normalise to 9:16 and layer on the camera move."""
@@ -607,7 +687,14 @@ class Pipeline:
 
     @staticmethod
     def _motion_intensity(beat: Beat) -> float:
-        """Hooks get a firmer move; loop beats stay calm so the seam hides."""
+        """Hooks get a firmer move; loop beats stay calm so the seam hides.
+
+        A *derived* loop beat is beat one's own footage, so it takes beat one's
+        intensity too — matching the treatment keeps the final frames close to
+        the opening frames, which is the whole point of deriving it.
+        """
+        if beat.is_derived:
+            return 1.15
         return {"hook": 1.15, "switch": 1.2, "payoff": 1.0, "loop": 0.6}.get(beat.role, 0.9)
 
     def _save(self, job: JobRecord) -> Path:
@@ -633,6 +720,7 @@ class Pipeline:
             "generated_at": iso(),
             "providers": self.providers.describe(),
             "degraded": result.degraded_providers,
+            "estimate": result.estimate.to_dict() if result.estimate else None,
             "total_cost_usd": result.total_cost_usd,
             "succeeded": [
                 {

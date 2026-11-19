@@ -83,10 +83,18 @@ class Beat:
     negative_prompt: str = ""
     still_prompt: str = ""  # for image-first providers
     onscreen_text: str = "" # burned-in text for this beat, may be empty
+    #: Slug of the beat this one is derived from locally instead of generated.
+    #: Set at concept time so the preflight estimate knows the real request
+    #: count before anything is billed. Empty means "generate this beat".
+    derived_from: str = ""
 
     @property
     def slug(self) -> str:
         return f"beat_{self.index:02d}"
+
+    @property
+    def is_derived(self) -> bool:
+        return bool(self.derived_from)
 
 
 @dataclass

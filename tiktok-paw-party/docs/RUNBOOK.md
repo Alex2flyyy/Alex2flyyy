@@ -120,6 +120,9 @@ jq '{cost: .total_cost_usd, ok: (.succeeded|length), failed: (.failed|length), d
 
 pawparty costs
 pawparty stats
+
+# What tonight's batch will cost, before anything is generated
+pawparty run --count 7 --estimate-only
 ```
 
 **Three things worth alerting on:**
@@ -199,6 +202,23 @@ pawparty build <concept-id> --from-stage clips
 
 If it recurs across videos, the prompt is likely being refused by the model.
 Check the archived prompt in `Videos/Prompts/<date>/<concept-id>/prompts.md`.
+
+### `cannot derive beat_NN from beat_01 ... generating it instead`
+
+The loop beat is normally cut from beat one for free. This says beat one's clip
+was missing, empty, undecodable or too short, so the loop beat was generated —
+costing one request that the preflight estimate did not budget for.
+
+One video doing this is not worth chasing. Several in a batch means beat-one
+generations are failing or returning truncated clips; check the provider and
+the raw clips:
+
+```bash
+ffprobe -v error -show_entries format=duration -of csv=p=0 \
+  Videos/Generated/<date>/<concept-id>/raw/beat_01.mp4
+```
+
+To opt out of derivation entirely, set `reuse_loop_clip: false`.
 
 ### `budget: daily spend would reach $X, over the $Y cap`
 

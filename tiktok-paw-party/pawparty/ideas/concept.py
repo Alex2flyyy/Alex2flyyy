@@ -199,6 +199,9 @@ class ConceptGenerator:
             transitions=transitions,
             loop_strategy=loop_strategy,
         )
+        # Decide loop-beat reuse now, not at render time, so the preflight
+        # estimate reflects the true request count before anything is billed.
+        struct.mark_derivable_loop(beats, enabled=self.settings.reuse_loop_clip)
 
         title = self._title(theme, cast, dance, occasion)
         concept_id = f"{slugify(title, 34)}-{short_hash(self.channel.name, seed, slot, title)}"

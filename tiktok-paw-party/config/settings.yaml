@@ -20,6 +20,14 @@ concurrency: 2
 # next time a job needs a partial re-render. Set false on a small VPS.
 keep_intermediates: true
 
+# Derive the final loop beat from the opening of beat one instead of asking the
+# provider for a separate clip. The loop beat exists purely to rhyme with frame
+# one, so reusing that footage makes the seam exact instead of approximate, and
+# guarantees the same animal — while removing ~13% of all generation requests.
+# Models bill in discrete blocks, so a 1.6s beat otherwise costs a full 5s.
+# Set false to generate every beat independently.
+reuse_loop_clip: true
+
 # -----------------------------------------------------------------------------
 # Render — the finished file's specification
 # -----------------------------------------------------------------------------

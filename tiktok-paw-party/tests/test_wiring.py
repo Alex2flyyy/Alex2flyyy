@@ -244,7 +244,10 @@ def test_proposed_config_is_accepted_by_the_real_provider(monkeypatch):
     })
     provider._check()  # must not raise
     assert provider.input_map["first_frame"] == "start_image"
-    assert provider.estimate_cost(4.0) == pytest.approx(0.20)
+    # A 4s beat falls inside the 5s block, and the block is what gets billed —
+    # charging only for the 4s requested understates a real bill.
+    assert provider.billed_seconds(4.0) == 5
+    assert provider.estimate_cost(4.0) == pytest.approx(0.25)
 
 
 # --------------------------------------------------------------------------- #

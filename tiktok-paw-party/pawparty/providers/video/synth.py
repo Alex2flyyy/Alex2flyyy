@@ -32,6 +32,10 @@ class SynthVideoProvider(BaseProvider):
 
     name = "synth"
 
+    def billed_seconds(self, duration_s: float) -> float:
+        """Nothing is billed, but report the seconds so previews show a shape."""
+        return max(0.0, float(duration_s))
+
     def estimate_cost(self, duration_s: float) -> float:  # noqa: ARG002 - free
         return 0.0
 

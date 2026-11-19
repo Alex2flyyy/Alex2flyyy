@@ -127,6 +127,10 @@ class Settings:
     subtitles: SubtitleSettings = field(default_factory=SubtitleSettings)
     #: Keep intermediates around for debugging; set False to save disk.
     keep_intermediates: bool = True
+    #: Derive the final loop beat from the opening of beat one instead of
+    #: requesting a separately billed clip for it. Free, and the loop is exact
+    #: rather than approximate. See pawparty/media/loop.py.
+    reuse_loop_clip: bool = True
     raw: dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -267,6 +271,7 @@ def load_settings(
         schedule=_build(ScheduleSettings, data.get("schedule", {}), "schedule"),
         subtitles=_build(SubtitleSettings, data.get("subtitles", {}), "subtitles"),
         keep_intermediates=bool(data.get("keep_intermediates", True)),
+        reuse_loop_clip=bool(data.get("reuse_loop_clip", True)),
         raw=data,
     )
     _validate(settings)
