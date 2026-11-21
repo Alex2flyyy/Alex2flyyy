@@ -175,6 +175,32 @@ def duration_of(path: Path | str) -> float:
     return probe(path).duration_s
 
 
+def is_decodable(path: Path | str, *, min_duration_s: float = 0.01) -> tuple[bool, str]:
+    """``(ok, reason)`` — is this file actually readable video?
+
+    "Exists and is non-empty" is not the same as "usable". A provider download
+    cut short by a timeout, a full disk, or a killed process leaves a file with
+    plenty of bytes and no `moov` atom. Resume logic that trusts file size will
+    happily reuse it and then fail several stages later with an opaque error,
+    pointing at the wrong place.
+    """
+    path = Path(path)
+    if not path.exists():
+        return False, "file does not exist"
+    if path.stat().st_size == 0:
+        return False, "file is empty"
+    try:
+        info = probe(path)
+    except Exception as exc:
+        tail = str(exc).strip().splitlines()[-1] if str(exc).strip() else "unreadable"
+        return False, f"undecodable ({tail})"
+    if info.duration_s < min_duration_s:
+        return False, f"duration is {info.duration_s:.3f}s"
+    if info.width <= 0 or info.height <= 0:
+        return False, "no video stream"
+    return True, ""
+
+
 # --------------------------------------------------------------------------- #
 # Small reusable operations
 # --------------------------------------------------------------------------- #

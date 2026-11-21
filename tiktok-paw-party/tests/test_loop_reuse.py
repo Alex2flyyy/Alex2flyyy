@@ -144,7 +144,7 @@ def test_short_beat_can_be_derived(source_clip):
 def test_missing_first_clip_is_refused(tmp_path):
     check = can_derive(tmp_path / "nope.mp4", 1.2)
     assert not check
-    assert "missing" in check.reason
+    assert "does not exist" in check.reason
 
 
 def test_absent_source_path_is_refused():
@@ -168,7 +168,7 @@ def test_undecodable_first_clip_is_refused(tmp_path):
     path.write_bytes(b"this is definitely not an mp4" * 50)
     check = can_derive(path, 1.2)
     assert not check
-    assert "unreadable" in check.reason or "duration" in check.reason
+    assert "undecodable" in check.reason
 
 
 @pytest.mark.ffmpeg

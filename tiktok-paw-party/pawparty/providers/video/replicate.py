@@ -61,11 +61,26 @@ class ReplicateVideoProvider(BaseProvider):
         self.input_map = {**_DEFAULT_INPUT_MAP, **(self.opt("input_map") or {})}
         self.static_input = dict(self.opt("static_input") or {})
         self.timeout_s = int(self.opt("timeout_s", 900))
+        #: Clip lengths this model accepts, ascending. Varies by model, so it is
+        #: configurable; `pawparty wire --show-schema` prints the real enum.
+        blocks = self.opt("duration_blocks") or [5, 6, 8, 10]
+        self.duration_blocks = sorted({int(b) for b in blocks if int(b) > 0}) or [10]
+        self._warned_over_limit = False
 
     # ------------------------------------------------------------------ #
     def billed_seconds(self, duration_s: float) -> float:
         """Replicate bills the whole requested block, not the trimmed result."""
         return float(self._round_duration(duration_s))
+
+    def exceeds_model_limit(self, duration_s: float) -> bool:
+        """True when a beat is longer than this model can generate in one clip.
+
+        Such a beat is still *requested* at the largest block — there is no
+        other option — and the assembly stage then retimes the short clip to
+        fill the beat, which softens the motion. Worth knowing before a paid
+        run rather than after.
+        """
+        return duration_s > max(self.duration_blocks)
 
     def estimate_cost(self, duration_s: float) -> float:
         return round(self.cost_per_second * self.billed_seconds(duration_s), 4)
@@ -166,18 +181,38 @@ class ReplicateVideoProvider(BaseProvider):
             json_body={"input": payload},
         )
 
-    @staticmethod
-    def _round_duration(duration_s: float) -> int:
-        """Most video models only accept a few discrete lengths.
+    def _round_duration(self, duration_s: float) -> int:
+        """Round a beat length up to the nearest duration the model accepts.
 
-        We ask for the nearest supported value and let the assembly stage trim
-        to the exact beat duration — trimming is free, re-generating is not.
-        This is also the billed block, so :meth:`billed_seconds` reuses it.
+        Models only take a few discrete lengths, so we ask for the nearest
+        supported value and let the assembly stage trim to the exact beat
+        duration — trimming is free, re-generating is not. This is also the
+        billed block, so :meth:`billed_seconds` reuses it.
+
+        A beat longer than the largest block cannot be generated in one clip.
+        We clamp to the largest block (the only thing the API would accept) but
+        warn, because the result is a short clip that assembly has to retime —
+        a quality cost that is otherwise invisible until you watch the output.
+        The blocks are configurable per model; the default is the set used by
+        most current video models.
         """
-        for allowed in (5, 6, 8, 10):
+        blocks = self.duration_blocks
+        for allowed in blocks:
             if duration_s <= allowed:
                 return allowed
-        return 10
+
+        largest = blocks[-1]
+        if not self._warned_over_limit:
+            self._warned_over_limit = True
+            log.warning(
+                "beat of %.2fs exceeds the longest clip %s can generate (%ss). "
+                "Requesting %ss and letting assembly retime it, which softens the "
+                "motion. Either lower the duration band's ceiling, or set "
+                "providers.options.replicate.duration_blocks if this model "
+                "supports longer clips.",
+                duration_s, self.model or "this model", largest, largest,
+            )
+        return largest
 
 
 def _to_data_uri(path: Path) -> str:

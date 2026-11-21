@@ -48,8 +48,10 @@ class SynthImageProvider(BaseProvider):
             [
                 "-f", "lavfi",
                 "-i",
+                # seed is explicit: `gradients` defaults to seed=-1 (random),
+                # which would make the same prompt render differently each run.
                 f"gradients=s={width}x{height}:c0=0x{r:02x}{g:02x}{b:02x}:"
-                f"c1=0x{r2:02x}{g2:02x}{b2:02x}:d=1:r=1",
+                f"c1=0x{r2:02x}{g2:02x}{b2:02x}:d=1:r=1:seed={rng.randrange(1 << 31)}",
                 "-frames:v", "1",
                 "-vf", chain,
                 str(output),

@@ -303,6 +303,10 @@ def mux(
     Audio is loudness-normalised to the platform target so a viewer scrolling
     from someone else's video doesn't get blasted or left straining. Subtitles
     are burned rather than sidecarred because TikTok ignores sidecar files.
+
+    The bed gets a short fade at *both* ends. The fade-out matters more than it
+    looks: these videos are built to loop, and audio that stops at full volume
+    clicks audibly on restart — right at the seam the loop beat exists to hide.
     """
     render = settings.render
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -321,11 +325,26 @@ def mux(
     args += ["-vf", ",".join(video_filters)]
 
     if audio and Path(audio).exists():
-        args += [
-            "-af",
-            f"loudnorm=I={render.loudness_lufs}:TP=-1.5:LRA=11,"
-            f"afade=t=in:st=0:d=0.25,"
+        # `-shortest` cuts the mix at the video's length, so the fade-out has
+        # to be anchored to the video, not to the (deliberately longer) bed.
+        video_duration = ffmpeg.duration_of(video)
+        fade_in = max(0.0, float(render.audio_fade_in_s))
+        fade_out = max(0.0, float(render.audio_fade_out_s))
+        # Never let the two fades meet on a very short video.
+        fade_out = min(fade_out, max(0.0, video_duration / 2 - fade_in))
+        fade_out_start = max(0.0, video_duration - fade_out)
+
+        audio_chain = [
+            f"loudnorm=I={render.loudness_lufs}:TP=-1.5:LRA=11",
             f"aresample={render.audio_sample_rate}",
+        ]
+        if fade_in > 0:
+            audio_chain.append(f"afade=t=in:st=0:d={fade_in:.3f}")
+        if fade_out > 0:
+            audio_chain.append(f"afade=t=out:st={fade_out_start:.3f}:d={fade_out:.3f}")
+
+        args += [
+            "-af", ",".join(audio_chain),
             "-map", "0:v:0", "-map", "1:a:0",
             "-c:a", render.audio_codec, "-b:a", render.audio_bitrate,
             "-ar", str(render.audio_sample_rate), "-ac", "2",

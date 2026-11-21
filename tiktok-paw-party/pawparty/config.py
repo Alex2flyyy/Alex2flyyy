@@ -49,6 +49,11 @@ class RenderSettings:
     audio_bitrate: str = "160k"
     audio_sample_rate: int = 48000
     loudness_lufs: float = -14.0
+    #: Short fades at both ends of the music bed. Symmetric and deliberately
+    #: brief: the video is built to loop, so the audio has to join cleanly on
+    #: restart, but a long fade-out would flatten the payoff.
+    audio_fade_in_s: float = 0.22
+    audio_fade_out_s: float = 0.22
     #: Safe margin (fraction of height) kept clear of TikTok's own UI overlays.
     safe_top: float = 0.12
     safe_bottom: float = 0.20

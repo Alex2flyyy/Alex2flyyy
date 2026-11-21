@@ -382,6 +382,7 @@ closing frames *are* the opening frames. See
 | [docs/PUBLISHING.md](docs/PUBLISHING.md) | TikTok API approval, OAuth, and the manual path |
 | [docs/LEGAL.md](docs/LEGAL.md) | Music licensing, AI disclosure, platform policy |
 | [docs/RUNBOOK.md](docs/RUNBOOK.md) | Daily automation, troubleshooting, common failures |
+| [docs/QA-loop-reuse.md](docs/QA-loop-reuse.md) | Release-readiness audit: measured before/after, and what must be in place before a paid render |
 
 ---
 

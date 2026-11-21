@@ -43,6 +43,11 @@ render:
   audio_bitrate: 160k
   audio_sample_rate: 48000
   loudness_lufs: -14.0 # platform loudness target; louder gets turned down anyway
+  # Short, symmetric fades on the music bed. The video is built to loop, so the
+  # audio must join cleanly on restart; without a fade-out it ends at full
+  # volume and the restart clicks. Kept brief so the payoff isn't flattened.
+  audio_fade_in_s: 0.22
+  audio_fade_out_s: 0.22
   safe_top: 0.12       # fraction of height reserved for platform UI
   safe_bottom: 0.20
 

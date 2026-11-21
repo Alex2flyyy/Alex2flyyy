@@ -62,23 +62,16 @@ def can_derive(source: Path | str | None, loop_duration_s: float) -> DerivationC
         return DerivationCheck(False, "no source clip was recorded for the first beat")
 
     path = Path(source)
-    if not path.exists():
-        return DerivationCheck(False, f"source clip is missing: {path.name}")
-    if path.stat().st_size == 0:
-        return DerivationCheck(False, f"source clip is empty: {path.name}")
     if loop_duration_s <= 0:
         return DerivationCheck(False, f"loop duration {loop_duration_s}s is not positive")
 
-    try:
-        info = ffmpeg.probe(path)
-    except Exception as exc:  # unreadable file — treat as absent, don't crash
-        return DerivationCheck(False, f"source clip is unreadable: {exc}")
+    # Same validator the clips stage uses, so the two can never disagree about
+    # whether a given file is usable.
+    usable, why = ffmpeg.is_decodable(path)
+    if not usable:
+        return DerivationCheck(False, f"source clip is {why}")
 
-    if info.duration_s <= 0:
-        return DerivationCheck(
-            False, f"source clip reports no duration", source_duration_s=info.duration_s
-        )
-
+    info = ffmpeg.probe(path)
     if info.duration_s + DURATION_EPSILON_S < loop_duration_s:
         return DerivationCheck(
             False,

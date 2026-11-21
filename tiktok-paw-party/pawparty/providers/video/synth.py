@@ -92,6 +92,10 @@ class SynthVideoProvider(BaseProvider):
         # ffmpeg's `gradients` filter accepts speed in (0, 1]; anything above
         # that fails the whole render with "Numerical result out of range".
         speed = 0.15 + rng.random() * 0.8
+        # `gradients` seeds itself randomly by default (seed=-1), which made
+        # preview renders differ between runs even for the same --seed. The
+        # concept was reproducible; the footage was not.
+        grad_seed = rng.randrange(1 << 31)
         label = _wrap(prompt, 34)[:3]
         drawtexts = self._drawtext_stack(label, height, fps)
 
@@ -102,7 +106,8 @@ class SynthVideoProvider(BaseProvider):
             "-i",
             f"gradients=s={width}x{height}:c0=0x{r:02x}{g:02x}{b:02x}:"
             f"c1=0x{r2:02x}{g2:02x}{b2:02x}:x0={width//4}:y0={height//4}:"
-            f"x1={width}:y1={height}:speed={speed:.3f}:d={duration_s:.3f}:r={fps}",
+            f"x1={width}:y1={height}:speed={speed:.3f}:d={duration_s:.3f}:r={fps}:"
+            f"seed={grad_seed}",
             "-f", "lavfi",
             "-i",
             f"life=s={max(64, width // 8)}x{max(64, height // 8)}:mold=10:r={fps}:"

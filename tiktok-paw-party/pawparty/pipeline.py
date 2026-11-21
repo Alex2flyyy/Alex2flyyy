@@ -377,10 +377,22 @@ class Pipeline:
         for beat in concept.beats:
             target = raw_dir / f"{beat.slug}.mp4"
             if target.exists() and target.stat().st_size > 0:
-                log.debug("reusing existing clip %s", target.name, extra={"concept": concept.id})
-                paths.append(str(target))
-                produced[beat.slug] = target
-                continue
+                # Validate before trusting it. A download cut short by a
+                # timeout or a full disk leaves a file with plenty of bytes and
+                # no moov atom; reusing it fails three stages later with an
+                # error that points at the wrong place.
+                usable, why = ffmpeg.is_decodable(target)
+                if usable:
+                    log.debug("reusing existing clip %s", target.name,
+                              extra={"concept": concept.id})
+                    paths.append(str(target))
+                    produced[beat.slug] = target
+                    continue
+                log.warning(
+                    "discarding cached clip %s (%s) and regenerating it",
+                    target.name, why, extra={"concept": concept.id},
+                )
+                target.unlink(missing_ok=True)
 
             if beat.is_derived:
                 source = produced.get(beat.derived_from)

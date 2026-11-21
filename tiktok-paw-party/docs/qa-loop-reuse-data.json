@@ -1,0 +1,196 @@
+{
+  "seed": 31,
+  "variants": {
+    "after": {
+      "reuse_loop_clip": true,
+      "concept_id": "ninja-dojo-puppies-hip-hop-bounce-2d83460c",
+      "title": "Ninja dojo \u2014 Puppies hip-hop bounce",
+      "beats": 4,
+      "derived_beats": 1,
+      "clips_stage": "4 clips (3 generated, 1 derived locally)",
+      "stills_stage": "3 stills",
+      "file": {
+        "duration_s": 16.9,
+        "resolution": "1080x1920",
+        "fps": 30.0,
+        "size_mb": 8.69,
+        "video_codec": "h264",
+        "audio_codec": "aac"
+      },
+      "qc": {
+        "passed": true,
+        "errors": [],
+        "warnings": [],
+        "info": {
+          "duration_s": 16.9,
+          "width": 1080,
+          "height": 1920,
+          "fps": 30.0,
+          "has_audio": true,
+          "video_codec": "h264",
+          "audio_codec": "aac",
+          "size_mb": 8.69,
+          "bitrate_kbps": 4313
+        }
+      },
+      "seam": {
+        "duration_s": 16.9,
+        "fps": 30,
+        "frame_ms": 33.3,
+        "window_frames": 6,
+        "window_span_ms": 200.0,
+        "last_vs_first": 0.8602,
+        "window_scores": [
+          0.8382,
+          0.8411,
+          0.8556,
+          0.8557,
+          0.8526,
+          0.8535
+        ],
+        "window_mean": 0.8495
+      },
+      "captions": {
+        "cards": 3,
+        "hook_at_zero": true,
+        "last_card_end_s": 16.75,
+        "headroom_s": 0.15,
+        "issues": [],
+        "detail": [
+          {
+            "start": 0.0,
+            "end": 2.6,
+            "emphasis": "hook",
+            "text": "WATCH THE ENDING"
+          },
+          {
+            "start": 3.9,
+            "end": 6.15,
+            "emphasis": "beat",
+            "text": "NOW WATCH THIS ONE"
+          },
+          {
+            "start": 13.7,
+            "end": 16.75,
+            "emphasis": "cta",
+            "text": "RATE THE ENDING OUT OF 10 \ud83d\udc47"
+          }
+        ]
+      },
+      "audio": {
+        "has_audio": true,
+        "window_ms": {
+          "head": 73,
+          "tail": 73
+        },
+        "head_mean_dbfs": -25.1,
+        "mid_mean_dbfs": -14.8,
+        "tail_mean_dbfs": -32.5,
+        "tail_peak_dbfs": -21.2,
+        "fade_in_depth_db": 10.3,
+        "fade_out_depth_db": 17.7,
+        "fade_out_ok": true,
+        "fade_in_ok": true
+      }
+    },
+    "before": {
+      "reuse_loop_clip": false,
+      "concept_id": "ninja-dojo-puppies-hip-hop-bounce-2d83460c",
+      "title": "Ninja dojo \u2014 Puppies hip-hop bounce",
+      "beats": 4,
+      "derived_beats": 0,
+      "clips_stage": "4 clips (4 generated, 0 derived locally)",
+      "stills_stage": "4 stills",
+      "file": {
+        "duration_s": 16.9,
+        "resolution": "1080x1920",
+        "fps": 30.0,
+        "size_mb": 8.91,
+        "video_codec": "h264",
+        "audio_codec": "aac"
+      },
+      "qc": {
+        "passed": true,
+        "errors": [],
+        "warnings": [],
+        "info": {
+          "duration_s": 16.9,
+          "width": 1080,
+          "height": 1920,
+          "fps": 30.0,
+          "has_audio": true,
+          "video_codec": "h264",
+          "audio_codec": "aac",
+          "size_mb": 8.91,
+          "bitrate_kbps": 4420
+        }
+      },
+      "seam": {
+        "duration_s": 16.9,
+        "fps": 30,
+        "frame_ms": 33.3,
+        "window_frames": 6,
+        "window_span_ms": 200.0,
+        "last_vs_first": 0.7022,
+        "window_scores": [
+          0.6862,
+          0.6891,
+          0.6988,
+          0.6988,
+          0.6955,
+          0.6967
+        ],
+        "window_mean": 0.6942
+      },
+      "captions": {
+        "cards": 3,
+        "hook_at_zero": true,
+        "last_card_end_s": 16.75,
+        "headroom_s": 0.15,
+        "issues": [],
+        "detail": [
+          {
+            "start": 0.0,
+            "end": 2.6,
+            "emphasis": "hook",
+            "text": "WATCH THE ENDING"
+          },
+          {
+            "start": 3.9,
+            "end": 6.15,
+            "emphasis": "beat",
+            "text": "NOW WATCH THIS ONE"
+          },
+          {
+            "start": 13.7,
+            "end": 16.75,
+            "emphasis": "cta",
+            "text": "RATE THE ENDING OUT OF 10 \ud83d\udc47"
+          }
+        ]
+      },
+      "audio": {
+        "has_audio": true,
+        "window_ms": {
+          "head": 73,
+          "tail": 73
+        },
+        "head_mean_dbfs": -25.1,
+        "mid_mean_dbfs": -14.8,
+        "tail_mean_dbfs": -32.5,
+        "tail_peak_dbfs": -21.2,
+        "fade_in_depth_db": 10.3,
+        "fade_out_depth_db": 17.7,
+        "fade_out_ok": true,
+        "fade_in_ok": true
+      }
+    }
+  },
+  "determinism": {
+    "final_mp4_sha256_run1": "50cb4281cfef76ac13f78255edf352a73a4e432fe3fda580a4b92db9661b0290",
+    "final_mp4_sha256_run2": "50cb4281cfef76ac13f78255edf352a73a4e432fe3fda580a4b92db9661b0290",
+    "identical": true,
+    "concept_signature_run1": "ninja-dojo-puppies-hip-hop-bounce-2d83460c",
+    "concept_signature_run2": "ninja-dojo-puppies-hip-hop-bounce-2d83460c"
+  }
+}

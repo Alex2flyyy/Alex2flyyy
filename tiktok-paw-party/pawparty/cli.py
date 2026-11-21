@@ -194,42 +194,65 @@ def cmd_doctor(args: argparse.Namespace, settings: Settings) -> int:
                     ok = False
 
     # Sanity-check the budget against what a full day would actually cost.
-    # This uses the same estimator the preflight uses, on a real sample batch,
-    # so doctor and `run` can never quote different numbers.
+    #
+    # A single sample batch is not enough. Daily cost varies by 10-20% with the
+    # duration-band mix the sampler happens to draw, so a point estimate from
+    # one batch lands below a real night roughly half the time — and under-
+    # estimating is the dangerous direction for a budget check. Simulate
+    # several days and test the cap against the worst of them.
     if settings.providers.video != "synth":
         try:
+            import statistics
+
             from .costing import estimate_batch
             from .providers.registry import build_providers
 
             sample_workspace = Workspace.create(settings.workspace)
             bundle = build_providers(settings, sample_workspace)
+            # No ledger: doctor must not write sample concepts into the real
+            # novelty history just for a cost check.
             sample_generator = ConceptGenerator(
                 settings, load_channel(settings, args.channel)
             )
-            sample = [
-                sample_generator.generate_one(seed=i)
-                for i in range(settings.schedule.videos_per_day)
-            ]
-            estimate = estimate_batch(sample, bundle, settings)
 
-            print("\nbudget (estimated from a sample batch)")
-            for line in estimate.report_lines():
+            days = 5
+            per_day = settings.schedule.videos_per_day
+            totals: list[float] = []
+            samples = []
+            for day in range(days):
+                batch = [
+                    sample_generator.generate_one(seed=day * 10_000 + i)
+                    for i in range(per_day)
+                ]
+                day_estimate = estimate_batch(batch, bundle, settings)
+                totals.append(day_estimate.total_usd)
+                samples.append(day_estimate)
+
+            worst = max(totals)
+            typical = statistics.median(totals)
+            representative = samples[totals.index(worst)]
+
+            print(f"\nbudget (simulated over {days} days of {per_day} videos)")
+            for line in representative.report_lines():
                 print(line)
+            print(f"  daily range           ${min(totals):.2f} - ${worst:.2f}"
+                  f"  (median ${typical:.2f})")
             print(f"  daily cap             ${settings.budget.daily_usd:.2f}")
             print(f"  per-video cap         ${settings.budget.per_video_usd:.2f}")
 
-            if estimate.total_usd > settings.budget.daily_usd:
-                fits = max(1, int(settings.schedule.videos_per_day
-                                  * settings.budget.daily_usd / estimate.total_usd))
-                print("  ! the daily cap is below a full day's cost — the batch will "
-                      "stop early.")
-                print(f"    Raise budget.daily_usd to about ${estimate.total_usd * 1.2:.0f}, "
+            if worst > settings.budget.daily_usd:
+                fits = max(1, int(per_day * settings.budget.daily_usd / worst))
+                print("  ! the daily cap is below a busy day — the batch will stop early.")
+                print(f"    Raise budget.daily_usd to at least ${worst * 1.1:.0f}, "
                       f"or lower schedule.videos_per_day to {fits}.")
                 ok = False
-            if estimate.per_video_usd > settings.budget.per_video_usd:
-                print(f"  ! the per-video cap (${settings.budget.per_video_usd:.2f}) is "
-                      f"below the ${estimate.per_video_usd:.2f} a video costs — every "
-                      f"video will fail.")
+            elif typical > settings.budget.daily_usd * 0.9:
+                print("  ! the cap leaves under 10% headroom on a median day.")
+
+            worst_per_video = max(s.per_video_usd for s in samples)
+            if worst_per_video > settings.budget.per_video_usd:
+                print(f"  ! the per-video cap (${settings.budget.per_video_usd:.2f}) is below "
+                      f"the ${worst_per_video:.2f} a long video costs — those will fail.")
                 ok = False
         except Exception as exc:  # a broken estimate must not break doctor
             print(f"\nbudget              could not estimate: {exc}")
